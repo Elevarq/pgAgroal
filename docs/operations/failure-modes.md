@@ -137,6 +137,8 @@ kubectl -n pgagroal rollout restart deployment pgagroal
 - Monitor backend connection count via `pg_stat_activity`; alert if it exceeds `max_connections * replicas`
 - The PDB ensures at least one replica stays available during a rolling restart
 
+**Early detection** (see [Monitoring for Pool Corruption](#monitoring-for-pool-corruption) below)
+
 ## 7. CLI Management Commands Destabilize Running Daemon
 
 **Trigger**: running `pgagroal-cli conf set` or `pgagroal-cli reload` against a running pgagroal instance.
@@ -212,3 +214,70 @@ pgagroal max_connections <= (PG max_connections - superuser_reserved - other_ser
 | CLI conf set / reload | No | Yes | **No** | Restart pod; never use in production |
 | Pool exhaustion | No | Yes | Yes (when clients release) | Scale up or fix leaks |
 | Replica over-scaling | No | Yes | No | Reduce max_connections |
+
+---
+
+## Monitoring for Pool Corruption
+
+Pool corruption (failure mode #6) is silent -- the health check passes and logs may show nothing. Early detection requires monitoring the backend directly.
+
+### Signal: backend connection count exceeds expected maximum
+
+The expected maximum backend connections from pgagroal is:
+
+```
+expected_max = max_connections * replicas
+```
+
+If `pg_stat_activity` count exceeds this, the pool is likely corrupted.
+
+### Query to run against the PostgreSQL backend
+
+```sql
+SELECT
+    count(*) AS total_backend_connections,
+    count(*) FILTER (WHERE state = 'active') AS active,
+    count(*) FILTER (WHERE state = 'idle') AS idle,
+    count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_tx
+FROM pg_stat_activity
+WHERE backend_type = 'client backend'
+  AND usename NOT IN ('rdsadmin', 'postgres');
+```
+
+### Alert rule (Prometheus / CloudWatch)
+
+Alert if `total_backend_connections > max_connections * replicas` for more than 2 minutes:
+
+```
+pg_stat_activity_count{state!="superuser"} > (pgagroal_max_connections * pgagroal_replica_count) * 1.1
+```
+
+If the alert fires: `kubectl -n pgagroal rollout restart deployment pgagroal`.
+
+### Sampling script
+
+For ad-hoc monitoring, use the included sampling script:
+
+```bash
+PGPASSWORD=<password> scripts/sampling/connection-count.sh \
+  --host <rds-endpoint> --port 5432 --user <user> --db <database> \
+  --interval 5 --duration 300 --output conn_count.csv
+```
+
+Review the CSV: if the `total` column trends upward beyond `max_connections * replicas`, corruption is likely.
+
+---
+
+## Production Defaults Summary
+
+These defaults are applied in `pgagroal.conf.template` and the Helm ConfigMap:
+
+| Setting | Value | Why |
+|---|---|---|
+| `ev_backend` | `epoll` | Avoids io_uring segfault ([pgagroal#762](https://github.com/pgagroal/pgagroal/issues/762)). Temporary until upstream fix. |
+| `pipeline` | `auto` (session mode) | Transaction mode requires per-app validation. Session mode is safe by default. |
+| `validation` | `off` | Foreground validation adds latency. Enable if stale connections are a problem. |
+| `blocking_timeout` | `30` | Clients wait up to 30s for a pool slot before timeout. |
+| `idle_timeout` | `600` | Idle connections closed after 10 minutes. |
+
+**Never** use `pgagroal-cli conf set` or `pgagroal-cli reload` in production. Use rolling restart.
