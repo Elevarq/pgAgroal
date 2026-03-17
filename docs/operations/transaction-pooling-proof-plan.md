@@ -17,9 +17,14 @@ Each phase has gates. An application that fails a gate stays on session pooling.
 
 **Duration**: 1-2 hours per application.
 
-1. Complete the [compatibility checklist](java-hibernate-compatibility-checklist.md)
-2. Produce a disposition for each risk area: compatible / incompatible / needs mitigation
-3. If incompatible patterns are found, log them for the development team
+1. Copy the [assessment template](transaction-pooling-app-assessment-template.md) for the application:
+   ```bash
+   cp docs/operations/transaction-pooling-app-assessment-template.md docs/operations/assessment-<app-name>.md
+   ```
+2. Fill in the application profile section
+3. Complete the [compatibility checklist](java-hibernate-compatibility-checklist.md) and record results in the assessment
+4. Produce a disposition for each risk area: compatible / incompatible / needs mitigation
+5. If incompatible patterns are found, log them in the "Risky Patterns Found" table
 
 **Gate**: all checklist items pass or have documented mitigations applied.
 
