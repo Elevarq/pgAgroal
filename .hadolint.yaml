@@ -1,0 +1,2 @@
+ignored:
+  - DL3008  # apt-get: pin versions with =. Skipped -- base image is pinned, full package version pins are brittle.
