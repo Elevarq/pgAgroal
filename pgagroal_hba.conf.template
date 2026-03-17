@@ -1,0 +1,6 @@
+#
+# pgagroal host-based authentication
+#
+# TYPE  DATABASE  USER  ADDRESS      METHOD
+#
+host    all       all   all          all

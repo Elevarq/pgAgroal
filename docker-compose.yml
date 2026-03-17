@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:17.4-bookworm
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: testdb
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - pgagroal-net
+
+  pgagroal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_BACKEND_HOST: postgres
+      PG_BACKEND_PORT: "5432"
+      PGAGROAL_HOST: "*"
+      PGAGROAL_PORT: "6432"
+      MAX_CONNECTIONS: "100"
+      PGAGROAL_LOG_LEVEL: info
+    ports:
+      - "6432:6432"
+    networks:
+      - pgagroal-net
+
+  test-client:
+    image: postgres:17.4-bookworm
+    depends_on:
+      pgagroal:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: testpass
+    command:
+      - sh
+      - -c
+      - |
+        psql -h pgagroal -p 6432 -U testuser -d testdb -c 'SELECT 1 AS connection_ok;'
+        echo 'Test passed: connection via pgagroal successful'
+    networks:
+      - pgagroal-net
+
+volumes:
+  pg_data:
+
+networks:
+  pgagroal-net:
+    driver: bridge

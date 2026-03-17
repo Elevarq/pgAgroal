@@ -1,0 +1,15 @@
+apiVersion: v2
+name: pgagroal
+description: pgagroal PostgreSQL connection pooler
+type: application
+version: 0.1.0
+appVersion: "2.0.2"
+keywords:
+  - postgresql
+  - connection-pooler
+  - pgagroal
+home: https://github.com/pgagroal/pgagroal
+sources:
+  - https://github.com/pgagroal/pgagroal
+maintainers:
+  - name: elevarq

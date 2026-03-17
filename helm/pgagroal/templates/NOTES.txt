@@ -1,0 +1,17 @@
+pgagroal {{ .Chart.AppVersion }} has been deployed.
+
+Service: {{ include "pgagroal.fullname" . }}:{{ .Values.service.port }}
+Backend: {{ .Values.postgresql.host }}:{{ .Values.postgresql.port }}
+
+Connect from within the cluster:
+
+  psql -h {{ include "pgagroal.fullname" . }} -p {{ .Values.service.port }} -U <username> -d <database>
+
+Port-forward for local access:
+
+  kubectl port-forward svc/{{ include "pgagroal.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  psql -h 127.0.0.1 -p {{ .Values.service.port }} -U <username> -d <database>
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics available on port {{ .Values.metrics.port }}.
+{{- end }}

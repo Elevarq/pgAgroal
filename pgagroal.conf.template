@@ -1,0 +1,21 @@
+[pgagroal]
+host = ${PGAGROAL_HOST}
+port = ${PGAGROAL_PORT}
+unix_socket_dir = /tmp/
+
+log_type = console
+log_level = ${PGAGROAL_LOG_LEVEL}
+
+max_connections = ${MAX_CONNECTIONS}
+idle_timeout = 600
+validation = off
+allow_unknown_users = true
+
+pipeline = auto
+keep_alive = on
+nodelay = on
+blocking_timeout = 30
+
+[primary]
+host = ${PG_BACKEND_HOST}
+port = ${PG_BACKEND_PORT}

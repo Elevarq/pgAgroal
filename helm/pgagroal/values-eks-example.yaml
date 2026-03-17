@@ -1,0 +1,82 @@
+# values-eks-example.yaml
+#
+# Production values for AWS EKS deployment.
+# Usage:
+#   helm install pgagroal ./helm/pgagroal -f ./helm/pgagroal/values-eks-example.yaml
+#
+# Prerequisites:
+#   - Push image to ECR:
+#       aws ecr get-login-password | docker login --username AWS --password-stdin <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com
+#       docker tag pgagroal:2.0.2 <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/pgagroal:2.0.2
+#       docker push <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/pgagroal:2.0.2
+#   - Create the external secret or use credentials.create with sealed-secrets
+
+replicaCount: 3
+
+image:
+  repository: "123456789012.dkr.ecr.eu-west-1.amazonaws.com/pgagroal"
+  tag: "2.0.2"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  annotations:
+    # IRSA role for ECR pull (if not using imagePullSecrets)
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/pgagroal-ecr-pull"
+
+pgagroal:
+  host: "*"
+  port: 6432
+  maxConnections: 200
+  logLevel: info
+
+postgresql:
+  # RDS endpoint
+  host: "mydb.cluster-xxxxxxxxxxxx.eu-west-1.rds.amazonaws.com"
+  port: 5432
+
+credentials:
+  create: false
+  existingSecret: "pgagroal-pg-credentials"
+
+service:
+  type: ClusterIP
+  port: 6432
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 128Mi
+  limits:
+    cpu: "2"
+    memory: 512Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9187"
+
+metrics:
+  enabled: true
+  port: 9187
+
+# Spread across AZs for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - pgagroal
+          topologyKey: topology.kubernetes.io/zone
+
+tolerations: []
+
+nodeSelector: {}

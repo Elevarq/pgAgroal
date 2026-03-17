@@ -1,0 +1,174 @@
+# -- Number of pgagroal replicas
+replicaCount: 2
+
+image:
+  # -- Container image repository
+  repository: pgagroal
+  # -- Image tag (must match appVersion unless overridden)
+  tag: "2.0.2"
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets for private registries
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a dedicated ServiceAccount
+  create: true
+  # -- Annotations for the ServiceAccount (e.g. IRSA)
+  annotations: {}
+  # -- Override ServiceAccount name
+  name: ""
+
+# -- Annotations added to every pod
+podAnnotations: {}
+
+# -- Labels added to every pod
+podLabels: {}
+
+# ---------------------------------------------------------------------------
+# pgagroal configuration (passed as env vars to the entrypoint)
+# ---------------------------------------------------------------------------
+pgagroal:
+  # -- Bind address inside the container
+  host: "*"
+  # -- Bind port
+  port: 6432
+  # -- Maximum pooled connections
+  maxConnections: 100
+  # -- Log level: fatal, error, warn, info, debug1-debug5, trace
+  logLevel: info
+
+# ---------------------------------------------------------------------------
+# PostgreSQL backend
+# ---------------------------------------------------------------------------
+postgresql:
+  # -- Backend host (usually a K8s Service name)
+  host: "postgres"
+  # -- Backend port
+  port: 5432
+
+# ---------------------------------------------------------------------------
+# Credentials (stored in a Secret)
+# ---------------------------------------------------------------------------
+credentials:
+  # -- Create the Secret from these values
+  create: true
+  # -- PostgreSQL username
+  username: ""
+  # -- PostgreSQL password
+  password: ""
+  # -- Use an existing Secret instead (keys: PG_USERNAME, PG_PASSWORD)
+  existingSecret: ""
+
+# ---------------------------------------------------------------------------
+# Kubernetes Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 6432
+
+# ---------------------------------------------------------------------------
+# Probes
+# ---------------------------------------------------------------------------
+livenessProbe:
+  exec:
+    command:
+      - pgagroal-cli
+      - "-c"
+      - /etc/pgagroal/pgagroal.conf
+      - ping
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  exec:
+    command:
+      - pgagroal-cli
+      - "-c"
+      - /etc/pgagroal/pgagroal.conf
+      - ping
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 2
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Pod disruption budget
+# ---------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: true
+  # -- Minimum available replicas during voluntary disruption
+  minAvailable: 1
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ---------------------------------------------------------------------------
+# Scheduling
+# ---------------------------------------------------------------------------
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ---------------------------------------------------------------------------
+# Metrics (Prometheus)
+# ---------------------------------------------------------------------------
+metrics:
+  # -- Enable the Prometheus metrics port (pgagroal built-in)
+  enabled: false
+  # -- Metrics port
+  port: 9187
+
+# ---------------------------------------------------------------------------
+# Observability sidecar (future Elevarq collector / custom exporter)
+# ---------------------------------------------------------------------------
+observability:
+  sidecar:
+    # -- Enable the observability sidecar container
+    enabled: false
+    # -- Sidecar container image
+    image: ""
+    # -- Sidecar image tag
+    tag: ""
+    # -- Sidecar image pull policy
+    pullPolicy: IfNotPresent
+    # -- Sidecar container port (e.g. for a /metrics endpoint)
+    port: 9188
+    # -- Sidecar resource requests/limits
+    resources: {}
+    # -- Extra environment variables for the sidecar
+    env: []
+    # -- Extra volume mounts for the sidecar (e.g. shared /tmp for unix socket)
+    extraVolumeMounts: []

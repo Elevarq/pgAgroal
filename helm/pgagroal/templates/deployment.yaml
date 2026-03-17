@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pgagroal.fullname" . }}
+  labels:
+    {{- include "pgagroal.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pgagroal.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "pgagroal.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "pgagroal.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: copy-config-templates
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["sh", "-c", "cp /etc/pgagroal-templates/* /etc/pgagroal/"]
+          volumeMounts:
+            - name: config-templates
+              mountPath: /etc/pgagroal-templates
+              readOnly: true
+            - name: config-writable
+              mountPath: /etc/pgagroal
+      containers:
+        - name: pgagroal
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: pooler
+              containerPort: {{ .Values.pgagroal.port }}
+              protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+            {{- end }}
+          env:
+            - name: PGAGROAL_HOST
+              value: {{ .Values.pgagroal.host | quote }}
+            - name: PGAGROAL_PORT
+              value: {{ .Values.pgagroal.port | quote }}
+            - name: PG_BACKEND_HOST
+              value: {{ .Values.postgresql.host | quote }}
+            - name: PG_BACKEND_PORT
+              value: {{ .Values.postgresql.port | quote }}
+            - name: MAX_CONNECTIONS
+              value: {{ .Values.pgagroal.maxConnections | quote }}
+            - name: PGAGROAL_LOG_LEVEL
+              value: {{ .Values.pgagroal.logLevel | quote }}
+            {{- if or .Values.credentials.create .Values.credentials.existingSecret }}
+            - name: PG_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgagroal.secretName" . }}
+                  key: PG_USERNAME
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgagroal.secretName" . }}
+                  key: PG_PASSWORD
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-writable
+              mountPath: /etc/pgagroal
+            - name: tmp
+              mountPath: /tmp
+        {{- if .Values.observability.sidecar.enabled }}
+        - name: observability-sidecar
+          image: "{{ .Values.observability.sidecar.image }}:{{ .Values.observability.sidecar.tag }}"
+          imagePullPolicy: {{ .Values.observability.sidecar.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: obs-metrics
+              containerPort: {{ .Values.observability.sidecar.port }}
+              protocol: TCP
+          {{- with .Values.observability.sidecar.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.observability.sidecar.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+              readOnly: true
+            {{- with .Values.observability.sidecar.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- end }}
+      volumes:
+        - name: config-templates
+          configMap:
+            name: {{ include "pgagroal.fullname" . }}
+        - name: config-writable
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

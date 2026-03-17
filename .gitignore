@@ -1,0 +1,30 @@
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp / build artifacts
+tmp/
+*.tmp
+*.swp
+*~
+
+# Docker volumes / local data
+pg_data/
+data/
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Helm packaging output
+helm/pgagroal/*.tgz

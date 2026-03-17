@@ -1,0 +1,106 @@
+name: Container CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: ShellCheck entrypoint.sh
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: .
+          additional_files: entrypoint.sh
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.2
+
+      - name: Helm lint
+        run: helm lint helm/pgagroal/
+
+      - name: Helm template (dry-run render)
+        run: |
+          helm template test-release helm/pgagroal/ \
+            --set credentials.username=testuser \
+            --set credentials.password=testpass \
+            --set postgresql.host=pg-host
+
+  build:
+    name: Build Image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: pgagroal:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  integration-test:
+    name: Integration Test
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pgagroal:2.0.2 .
+
+      - name: Run integration test
+        run: bash test/container-start-test.sh
+
+  resilience-test:
+    name: Backend Restart Resilience
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pgagroal:2.0.2 .
+
+      - name: Run backend restart test
+        run: bash test/backend-restart-test.sh
+
+  startup-failure-test:
+    name: Startup Failure Mode
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pgagroal:test .
+
+      - name: Run startup failure test
+        run: bash test/startup-failure-test.sh
