@@ -75,11 +75,11 @@ fi
 
 echo "--- Step 5: Attempt connection with non-existent user ---"
 set +e
-nouser_output=$(${COMPOSE} run --rm \
+${COMPOSE} run --rm \
     -e PGPASSWORD=testpass \
     test-client \
     psql -h pgagroal -p 6432 -U no_such_user_xyz -d testdb \
-         -c "SELECT 1;" 2>&1)
+         -c "SELECT 1;" >/dev/null 2>&1
 nouser_exit=$?
 set -e
 

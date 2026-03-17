@@ -98,8 +98,8 @@ if [ -z "${results_line}" ]; then
     exit 1
 fi
 
-ok=$(echo "${results_line}" | sed 's/.*ok=\([0-9]*\).*/\1/')
-fail=$(echo "${results_line}" | sed 's/.*fail=\([0-9]*\).*/\1/')
+ok="${results_line##*ok=}"; ok="${ok%% *}"
+fail="${results_line##*fail=}"; fail="${fail%% *}"
 
 echo ""
 echo "--- Summary ---"
