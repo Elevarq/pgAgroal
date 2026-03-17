@@ -11,6 +11,8 @@ Phase 1: Static Analysis  →  Phase 2: Lab Validation  →  Phase 3: Canary  �
 
 Each phase has gates. An application that fails a gate stays on session pooling.
 
+Track progress across all applications in the [assessment index](transaction-pooling-assessment-index.md).
+
 ---
 
 ## Phase 1: Static Analysis (per application)
