@@ -60,8 +60,10 @@ helm/pgagroal/values-eks-example.yaml      # Production EKS with AZ anti-affinit
 | Guide | Description |
 |---|---|
 | [Operations](docs/operations/operations.md) | Startup sequence, probes, scaling, troubleshooting |
-| [Failure modes](docs/operations/failure-modes.md) | 7 failure scenarios with recovery paths |
+| [Failure modes](docs/operations/failure-modes.md) | 9 failure scenarios with recovery paths |
 | [Secret rotation](docs/operations/secret-rotation-procedure.md) | Credential rotation for Docker and K8s |
+
+**Production defaults**: `ev_backend = epoll` (avoids upstream io_uring segfault), rolling restart for all config changes (reload is unsafe), `pgagroal-cli ping` checks daemon only (not backend). See [operations guide](docs/operations/operations.md) for details.
 
 ## Testing
 

@@ -20,6 +20,7 @@ data:
     allow_unknown_users = true
 
     pipeline = auto
+    ev_backend = epoll
     keep_alive = on
     nodelay = on
     blocking_timeout = 30

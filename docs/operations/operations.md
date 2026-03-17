@@ -32,7 +32,11 @@ Operational reference for running pgagroal in production.
 
 **What it does NOT test**: whether the PostgreSQL backend is reachable or whether the connection pool has available slots.
 
-This is intentional. A pooler should remain ready even when the backend is temporarily unavailable, so that it can:
+**Important limitation**: a pod can report "ready" via `ping` even when every backend is down. Clients routed to this pod will receive connection errors. This is a known upstream limitation ([pgagroal#688](https://github.com/pgagroal/pgagroal/issues/688)); a PR to add backend health to `ping` is pending. For now, application-side connection retry logic is essential.
+
+For deployments that require backend-aware readiness, see [Backend-Aware Readiness Probe](#backend-aware-readiness-probe) below.
+
+This design is intentional for the default case. A pooler should remain ready even when the backend is temporarily unavailable, so that it can:
 - Return informative errors to clients
 - Resume service immediately when the backend recovers
 - Avoid cascading pod restarts during a brief backend blip
@@ -82,9 +86,13 @@ pgagroal handles backend restarts gracefully:
 
 4. **Unix socket directory must be writable**. pgagroal writes management sockets to `unix_socket_dir` (`/tmp` in our config). In Kubernetes, `/tmp` is an emptyDir volume.
 
-5. **Config reload requires restart**. pgagroal supports `SIGHUP` for some settings, but not all. For guaranteed consistency, perform a rolling restart after config changes (the Helm chart's `checksum/config` annotation handles this).
+5. **Config reload requires restart**. `pgagroal-cli conf set` and `pgagroal-cli reload` are **unsafe in production** -- they can corrupt the daemon's event loop and cause "Bad file descriptor" accept loops or "Address already in use" errors ([pgagroal#767](https://github.com/pgagroal/pgagroal/issues/767), [pgagroal#750](https://github.com/pgagroal/pgagroal/issues/750)). Always use rolling restart for configuration changes. The Helm chart's `checksum/config` annotation handles this automatically on `helm upgrade`.
 
 6. **No native connection draining on shutdown**. When pgagroal receives `SIGTERM`, it shuts down. Active queries may be interrupted. Set `terminationGracePeriodSeconds` high enough for in-flight queries to complete and use a `preStop` hook if needed.
+
+7. **Event backend set to epoll**. We default to `ev_backend = epoll` instead of `auto` (which selects `io_uring` on Linux). This is a temporary safety default due to a known upstream segfault in the io_uring code path during socket teardown ([pgagroal#762](https://github.com/pgagroal/pgagroal/issues/762)). epoll is stable and well-tested. Once the upstream fix lands, this can be changed back to `auto`.
+
+8. **Prometheus config warnings**. If `metrics` is enabled, pgagroal may log "Unknown key" warnings for the `[prometheus]` configuration section at startup ([pgagroal#772](https://github.com/pgagroal/pgagroal/issues/772)). These are cosmetic -- metrics still work. The warnings can be ignored.
 
 ## Scaling Guidance
 
@@ -112,6 +120,29 @@ pgagroal is lightweight. Typical resource usage:
 - Memory: ~2-4 MB per pooled connection
 
 Start with `cpu: 100m / memory: 64Mi` requests and adjust based on observed usage.
+
+## Backend-Aware Readiness Probe
+
+The default readiness probe (`pgagroal-cli ping`) only checks daemon liveness. For deployments that need to verify backend connectivity, use this alternative probe in your Helm values:
+
+```yaml
+readinessProbe:
+  exec:
+    command:
+      - sh
+      - -c
+      - >-
+        pgagroal-cli -c /etc/pgagroal/pgagroal.conf ping &&
+        pg_isready -h ${PG_BACKEND_HOST} -p ${PG_BACKEND_PORT} -q
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 2
+```
+
+This checks both the daemon and the backend. The pod will be removed from the Service if either is unreachable.
+
+**Trade-off**: during a brief backend outage (e.g. RDS reboot), all pods become not-ready and the Service has no endpoints. Clients get "connection refused" instead of a pgagroal error message. Choose based on whether you prefer clear routing failures or informative pooler errors.
 
 ## Credential Rotation
 
@@ -150,3 +181,11 @@ See [test/secret-rotation-procedure.md](secret-rotation-procedure.md) for step-b
 - [ ] Wait for `idle_timeout` to expire stale connections
 - [ ] Or enable `validation = foreground` to catch them immediately
 - [ ] Check pgagroal logs for connection errors
+
+### Pool appears corrupted (0 TPS, connections growing)
+
+- [ ] Check `pg_stat_activity` count on the backend -- is it growing beyond `max_connections`?
+- [ ] This can happen after abnormal client disconnects ([pgagroal#503](https://github.com/pgagroal/pgagroal/issues/503))
+- [ ] **Recovery: restart the pod**. There is no in-place recovery.
+- [ ] In Kubernetes: `kubectl -n pgagroal rollout restart deployment pgagroal`
+- [ ] Prevent recurrence: ensure applications use `connect_timeout` and `statement_timeout`

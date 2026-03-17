@@ -206,6 +206,9 @@ Review for correctness: image repo/tag, postgresql.host, maxConnections, replica
 | `helm install` fails with `secret not found` | Credentials secret not created before install | Run `kubectl -n pgagroal create secret generic ...` first |
 | Multiple pods on same node | No anti-affinity set | Use `values-client-example.yaml` which includes AZ-spread affinity |
 | Pool exhaustion under load | `maxConnections` too low | Increase `pgagroal.maxConnections` (must fit within `RDS max_connections / replicas`) |
+| Pods healthy but clients get backend errors | Readiness probe checks daemon, not backend | This is expected; see [operations guide](../operations/operations.md#backend-aware-readiness-probe) for an alternative probe |
+| `pg_stat_activity` shows connections growing beyond expected | Pool corruption after abnormal client disconnect | Restart: `kubectl -n pgagroal rollout restart deployment pgagroal` |
+| Log warnings: "Unknown key" at startup | Prometheus `[prometheus]` config parser bug (cosmetic) | Ignore; metrics still work ([pgagroal#772](https://github.com/pgagroal/pgagroal/issues/772)) |
 
 ---
 

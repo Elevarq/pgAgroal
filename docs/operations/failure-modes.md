@@ -19,7 +19,7 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 
 **Recovery**: automatic. Once the backend becomes reachable, new client connections succeed without restart.
 
-**Tested by**: `test/startup-failure-test.sh`
+**Tested by**: `test/resilience/startup-failure-test.sh`
 
 **Kubernetes note**: this is normal during pod startup. The readiness probe (`pgagroal-cli ping`) will pass even if the backend is not yet available. This is intentional -- the pooler should not be killed during backend provisioning. Applications should implement connection retry logic.
 
@@ -40,7 +40,7 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 
 **Recovery**: automatic within seconds of backend returning.
 
-**Tested by**: `test/backend-restart-test.sh`
+**Tested by**: `test/resilience/backend-restart-test.sh`
 
 **Mitigation**: set `validation = foreground` to check connections before handing them to clients. This prevents serving stale connections at the cost of one extra round-trip per checkout.
 
@@ -61,7 +61,7 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 
 **Recovery**: client retries with correct credentials. No pooler restart needed.
 
-**Tested by**: `test/invalid-credentials-test.sh`
+**Tested by**: `test/validation/invalid-credentials-test.sh`
 
 **Important**: bad credential attempts do NOT poison the connection pool. Subsequent connections with correct credentials work normally.
 
@@ -103,11 +103,61 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 - Authentication errors in client applications
 - pgagroal stays healthy (daemon alive)
 
-**Recovery**: see [test/secret-rotation-procedure.md](../test/secret-rotation-procedure.md)
+**Recovery**: see [secret-rotation-procedure.md](secret-rotation-procedure.md)
 
 **Window of risk**: between PostgreSQL password change and pod restart. Keep this window small. In Kubernetes, automate with External Secrets Operator + rolling restart annotation.
 
-## 6. Connection Pool Exhaustion
+## 6. Pool Corruption After Abnormal Client Disconnect
+
+**Trigger**: a client process crashes, is killed, or has its TCP connection severed mid-session (e.g. application OOMKill, network partition, Ctrl+C during `pgbench`).
+
+**Behavior**:
+- The pooled backend connection may not be properly returned to the pool
+- In some cases, pgagroal continues opening new backend connections beyond the configured `max_connections` limit
+- Subsequent client connections may see 0 throughput or indefinite hangs
+- `pgagroal-cli status` may show connection counts exceeding the configured maximum
+- pgagroal does NOT crash -- the daemon stays running
+
+**Operator symptoms**:
+- Application reports connection timeouts or 0 TPS
+- `pg_stat_activity` on the backend shows more connections than expected
+- Health check (`pgagroal-cli ping`) continues to pass
+- Logs may not show any explicit error
+
+**Recovery**: **restart the pgagroal pod**. There is no in-place recovery. In Kubernetes:
+
+```bash
+kubectl -n pgagroal rollout restart deployment pgagroal
+```
+
+**Upstream reference**: [pgagroal#503](https://github.com/pgagroal/pgagroal/issues/503)
+
+**Mitigation**:
+- Ensure application code uses connection timeouts (`connect_timeout`, `statement_timeout`)
+- Monitor backend connection count via `pg_stat_activity`; alert if it exceeds `max_connections * replicas`
+- The PDB ensures at least one replica stays available during a rolling restart
+
+## 7. CLI Management Commands Destabilize Running Daemon
+
+**Trigger**: running `pgagroal-cli conf set` or `pgagroal-cli reload` against a running pgagroal instance.
+
+**Behavior**:
+- The configuration reload path has known bugs that cause network binding conflicts ("Address already in use") and repeated "Bad file descriptor" errors in the accept loop
+- The CLI management command forks a child process that can corrupt the parent's event loop
+- The daemon may become partially or fully unresponsive to new connections
+
+**Operator symptoms**:
+- Log spam: `accept: Bad file descriptor` or `Address already in use`
+- New connections fail intermittently or completely
+- Health check may still pass (daemon process alive, management socket responsive)
+
+**Recovery**: restart the pod.
+
+**Upstream references**: [pgagroal#767](https://github.com/pgagroal/pgagroal/issues/767), [pgagroal#750](https://github.com/pgagroal/pgagroal/issues/750)
+
+**Rule**: **never use `pgagroal-cli conf set` or `pgagroal-cli reload` in production**. Use rolling restart for all configuration changes. The Helm chart's `checksum/config` annotation triggers this automatically on `helm upgrade`.
+
+## 8. Connection Pool Exhaustion
 
 **Trigger**: more simultaneous client connections than `max_connections`.
 
@@ -128,7 +178,7 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 
 **Sizing rule**: `max_connections` should be >= peak concurrent application connections per pooler replica, but <= PostgreSQL's `max_connections / replicas`.
 
-## 7. Replica Scaling Caveats
+## 9. Replica Scaling Caveats
 
 **Trigger**: scaling pgagroal replicas without adjusting `max_connections`.
 
@@ -158,5 +208,7 @@ pgagroal max_connections <= (PG max_connections - superuser_reserved - other_ser
 | Invalid credentials | No | Yes | N/A (client error) | Fix client creds |
 | DNS failure | No | Yes | Yes (when DNS up) | Fix DNS if permanent |
 | Secret rotation | No | Yes | Partial | Restart pod if registered user |
+| Pool corruption (abnormal disconnect) | No | Yes | **No** | Restart pod |
+| CLI conf set / reload | No | Yes | **No** | Restart pod; never use in production |
 | Pool exhaustion | No | Yes | Yes (when clients release) | Scale up or fix leaks |
 | Replica over-scaling | No | Yes | No | Reduce max_connections |
