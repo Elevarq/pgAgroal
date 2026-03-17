@@ -68,6 +68,8 @@ pgagroal-container/
 │       ├── Chart.yaml
 │       ├── values.yaml
 │       ├── values-eks-example.yaml
+│       ├── values-client-example.yaml
+│       ├── values-client-minimal.yaml
 │       └── templates/
 │           ├── _helpers.tpl
 │           ├── deployment.yaml
@@ -81,7 +83,8 @@ pgagroal-container/
 │   ├── eks-deployment.md
 │   ├── operations.md
 │   ├── failure-modes.md
-│   └── release-checklist.md
+│   ├── release-checklist.md
+│   └── first-client-deployment.md
 ├── .github/
 │   └── workflows/
 │       └── container-ci.yml
@@ -155,20 +158,35 @@ helm install pgagroal helm/pgagroal/ \
   --set credentials.existingSecret=my-pg-creds
 ```
 
-### EKS Deployment
+### First Client Deployment (EKS)
 
-A complete step-by-step guide is in [docs/eks-deployment.md](docs/eks-deployment.md).
-
-Quick version:
+Full walkthrough: [docs/first-client-deployment.md](docs/first-client-deployment.md)
 
 ```bash
-# Push image to ECR
-docker tag pgagroal:2.0.2 <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/pgagroal:2.0.2
-docker push <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/pgagroal:2.0.2
+# 1. Create namespace and secret
+kubectl create namespace pgagroal
+kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
+  --from-literal=PG_USERNAME=app_user \
+  --from-literal=PG_PASSWORD='<password>'
 
-# Deploy with production values
-helm install pgagroal helm/pgagroal/ -f helm/pgagroal/values-eks-example.yaml -n pgagroal --create-namespace
+# 2. Copy and edit the values file
+cp helm/pgagroal/values-client-minimal.yaml client-values.yaml
+# Edit: image.repository, postgresql.host
+
+# 3. Install
+helm install pgagroal helm/pgagroal/ -f client-values.yaml -n pgagroal
+
+# 4. Smoke test
+kubectl -n pgagroal run smoke --rm -it --restart=Never \
+  --image=postgres:17.4-bookworm --env="PGPASSWORD=<password>" \
+  -- psql -h pgagroal -p 6432 -U app_user -d mydb -c "SELECT 1;"
 ```
+
+The guide includes an operational acceptance checklist to complete before client handoff.
+
+### EKS Reference
+
+Detailed infrastructure guide: [docs/eks-deployment.md](docs/eks-deployment.md) (ECR setup, IRSA, Security Groups, monitoring).
 
 ## Testing
 

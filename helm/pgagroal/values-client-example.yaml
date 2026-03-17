@@ -1,0 +1,109 @@
+# values-client-example.yaml
+#
+# Standard client deployment values.
+# Copy this file and fill in the client-specific fields marked with CHANGEME.
+#
+# Usage:
+#   cp helm/pgagroal/values-client-example.yaml client-values.yaml
+#   # Edit client-values.yaml
+#   helm install pgagroal helm/pgagroal/ -f client-values.yaml -n pgagroal --create-namespace
+
+# ---------------------------------------------------------------------------
+# Image (CHANGEME)
+# ---------------------------------------------------------------------------
+image:
+  repository: "CHANGEME.dkr.ecr.eu-west-1.amazonaws.com/pgagroal"  # CHANGEME: ECR URI
+  tag: "2.0.2"
+  pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# Replicas
+# ---------------------------------------------------------------------------
+replicaCount: 2
+
+# ---------------------------------------------------------------------------
+# PostgreSQL backend (CHANGEME)
+# ---------------------------------------------------------------------------
+postgresql:
+  host: "CHANGEME.cluster-xxxx.eu-west-1.rds.amazonaws.com"  # CHANGEME: RDS endpoint
+  port: 5432
+
+# ---------------------------------------------------------------------------
+# Credentials (CHANGEME)
+# ---------------------------------------------------------------------------
+# Create the secret first:
+#   kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
+#     --from-literal=PG_USERNAME=<user> --from-literal=PG_PASSWORD=<pass>
+credentials:
+  create: false
+  existingSecret: "pgagroal-pg-credentials"  # CHANGEME if using a different name
+
+# ---------------------------------------------------------------------------
+# pgagroal configuration
+# ---------------------------------------------------------------------------
+pgagroal:
+  host: "*"
+  port: 6432
+  maxConnections: 100   # Must fit: RDS max_connections / replicas
+  logLevel: info
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 6432
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# High availability
+# ---------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - pgagroal
+          topologyKey: topology.kubernetes.io/zone
+
+# ---------------------------------------------------------------------------
+# Optional: ECR pull via IRSA (CHANGEME or remove)
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  annotations: {}
+  # annotations:
+  #   eks.amazonaws.com/role-arn: "arn:aws:iam::CHANGEME:role/pgagroal-ecr-pull"
+
+# ---------------------------------------------------------------------------
+# Optional: annotations, selectors, tolerations
+# ---------------------------------------------------------------------------
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+
+# ---------------------------------------------------------------------------
+# Optional: Prometheus metrics
+# ---------------------------------------------------------------------------
+metrics:
+  enabled: false
+  port: 9187

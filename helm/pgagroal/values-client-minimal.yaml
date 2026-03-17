@@ -1,0 +1,17 @@
+# values-client-minimal.yaml
+#
+# Smallest viable client deployment.
+# Only the three mandatory fields -- everything else uses chart defaults.
+#
+# Usage:
+#   helm install pgagroal helm/pgagroal/ -f values-client-minimal.yaml -n pgagroal --create-namespace
+
+image:
+  repository: "CHANGEME.dkr.ecr.eu-west-1.amazonaws.com/pgagroal"  # CHANGEME
+
+postgresql:
+  host: "CHANGEME.cluster-xxxx.eu-west-1.rds.amazonaws.com"         # CHANGEME
+
+credentials:
+  create: false
+  existingSecret: "pgagroal-pg-credentials"                          # CHANGEME if different
