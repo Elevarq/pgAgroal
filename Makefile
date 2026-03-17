@@ -5,7 +5,7 @@ HELM_RELEASE := pgagroal
 HELM_CHART   := helm/pgagroal
 NAMESPACE    := pgagroal
 
-.PHONY: build run test test-backend-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall
+.PHONY: build run test test-backend-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run
 
 # ---------------------------------------------------------------------------
 # Docker
@@ -90,3 +90,21 @@ helm-upgrade:
 ## helm-uninstall : Remove the Helm release
 helm-uninstall:
 	helm uninstall $(HELM_RELEASE) -n $(NAMESPACE)
+
+# ---------------------------------------------------------------------------
+# Upstream refresh
+# ---------------------------------------------------------------------------
+
+## refresh         : Refresh pgagroal upstream version (requires VERSION=x.y.z)
+refresh:
+	@test -n "$(VERSION)" || { echo "Usage: make refresh VERSION=x.y.z"; exit 1; }
+	bash scripts/refresh-pgagroal.sh --version $(VERSION)
+
+## refresh-dry-run : Show what a refresh would change (requires VERSION=x.y.z)
+refresh-dry-run:
+	@test -n "$(VERSION)" || { echo "Usage: make refresh-dry-run VERSION=x.y.z"; exit 1; }
+	bash scripts/refresh-pgagroal.sh --version $(VERSION) --dry-run
+
+## test-refresh    : Run refresh script automated tests
+test-refresh:
+	bash test/refresh/test-refresh.sh

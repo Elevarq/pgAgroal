@@ -86,6 +86,12 @@ pgagroal-container/
 │   ├── release-checklist.md
 │   ├── first-client-deployment.md
 │   └── post-deployment-verification.md
+├── scripts/
+│   └── refresh-pgagroal.sh
+├── specifications/
+│   └── release-refresh/
+│       ├── spec.md
+│       └── acceptance-cases.md
 ├── .github/
 │   └── workflows/
 │       └── container-ci.yml
@@ -256,6 +262,9 @@ make test-all
 | `make helm-install` | Install chart into current cluster |
 | `make helm-upgrade` | Upgrade existing Helm release |
 | `make helm-uninstall` | Remove Helm release |
+| `make refresh VERSION=x.y.z` | Refresh pgagroal upstream version |
+| `make refresh-dry-run VERSION=x.y.z` | Preview refresh changes |
+| `make test-refresh` | Run refresh script tests |
 
 ## CI Pipeline
 
@@ -309,6 +318,17 @@ Summary:
 - Config reload via `SIGHUP` is partial; rolling restart is safer
 - `pgagroal-cli ping` checks daemon liveness, not backend reachability
 - Pooling reuse rate depends on `pipeline` mode; `session` (default) reuses on disconnect, `transaction` reuses after each statement
+
+### Monthly Upstream Refresh
+
+Update the bundled pgagroal version with a single command. Full guide: [docs/monthly-refresh.md](docs/monthly-refresh.md).
+
+```bash
+make refresh-dry-run VERSION=2.1.0   # preview changes
+make refresh VERSION=2.1.0           # update, build, test
+```
+
+The script updates Dockerfile, Makefile, Chart.yaml, and values.yaml, then rebuilds and runs the stable test suite. See [specifications/release-refresh/spec.md](specifications/release-refresh/spec.md) for the full specification.
 
 ### Release Process
 
