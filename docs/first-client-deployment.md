@@ -119,9 +119,11 @@ Expected output:
 
 The pod deletes itself after the command completes (`--rm`).
 
-## Step 8: Run the operational acceptance checklist
+## Step 8: Post-deployment verification
 
-See [Operational Acceptance Checklist](#operational-acceptance-checklist) below. Complete it before handing off to the client.
+Run through [docs/post-deployment-verification.md](post-deployment-verification.md) -- it covers release checks, log inspection, restart recovery, resource review, and a final acceptance checklist.
+
+Complete it before handing off to the client. A quick summary is also in the [Operational Acceptance Checklist](#operational-acceptance-checklist) below.
 
 ## Upgrades
 

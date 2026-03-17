@@ -84,7 +84,8 @@ pgagroal-container/
 │   ├── operations.md
 │   ├── failure-modes.md
 │   ├── release-checklist.md
-│   └── first-client-deployment.md
+│   ├── first-client-deployment.md
+│   └── post-deployment-verification.md
 ├── .github/
 │   └── workflows/
 │       └── container-ci.yml
@@ -182,7 +183,7 @@ kubectl -n pgagroal run smoke --rm -it --restart=Never \
   -- psql -h pgagroal -p 6432 -U app_user -d mydb -c "SELECT 1;"
 ```
 
-The guide includes an operational acceptance checklist to complete before client handoff.
+After install, run the [post-deployment verification](docs/post-deployment-verification.md) to confirm readiness, connectivity, resilience, and resource usage before client handoff.
 
 ### EKS Reference
 
