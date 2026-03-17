@@ -1,0 +1,8 @@
+# Default owners for the entire repository
+* @Elevarq/infrastructure
+
+# Helm chart
+helm/ @Elevarq/infrastructure
+
+# CI pipeline
+.github/ @Elevarq/infrastructure

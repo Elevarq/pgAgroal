@@ -56,7 +56,7 @@ This project uses two version numbers:
 - **Project version** (`VERSION`): follows semver, tracked via git tags (`v0.1.0`)
 - **pgagroal version** (`Dockerfile` `ARG PGAGROAL_VERSION`): upstream pgagroal release
 
-See [docs/release-checklist.md](docs/release-checklist.md) for the release procedure.
+See [docs/release/release-checklist.md](docs/release-checklist.md) for the release procedure.
 
 ## License
 

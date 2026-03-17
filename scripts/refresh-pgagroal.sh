@@ -247,7 +247,7 @@ info "image pgagroal:${TARGET_VERSION} built"
 TEST_RESULT="skip"
 if [[ "${SKIP_TESTS}" = false ]]; then
     step "Running integration test"
-    if ! bash test/container-start-test.sh; then
+    if ! bash test/integration/container-start-test.sh; then
         echo ""
         echo "FAIL: integration test failed"
         recovery_hint
@@ -255,7 +255,7 @@ if [[ "${SKIP_TESTS}" = false ]]; then
     fi
 
     step "Running backend restart test"
-    if ! bash test/backend-restart-test.sh; then
+    if ! bash test/resilience/backend-restart-test.sh; then
         echo ""
         echo "FAIL: backend restart test failed"
         recovery_hint

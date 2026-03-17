@@ -5,7 +5,7 @@ HELM_RELEASE := pgagroal
 HELM_CHART   := helm/pgagroal
 NAMESPACE    := pgagroal
 
-.PHONY: build run test test-backend-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run
+.PHONY: build run test test-backend-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
 
 # ---------------------------------------------------------------------------
 # Docker
@@ -22,29 +22,29 @@ run: build
 
 ## test      : Build and run the integration test
 test:
-	bash test/container-start-test.sh
+	bash test/integration/container-start-test.sh
 
 ## test-backend-restart : Test pgagroal recovery after backend restart
 test-backend-restart:
-	bash test/backend-restart-test.sh
+	bash test/resilience/backend-restart-test.sh
 
 ## test-concurrent : Test concurrent connections (default 20, override: make test-concurrent CONCURRENCY=50)
 test-concurrent:
-	bash test/concurrent-connection-test.sh $(CONCURRENCY)
+	bash test/resilience/concurrent-connection-test.sh $(CONCURRENCY)
 
 ## test-pooling : Validate connection pooling behavior
 test-pooling:
-	bash test/pooling-behavior-test.sh
+	bash test/validation/pooling-behavior-test.sh
 
 ## test-startup-failure : Test behavior when backend is unavailable at startup
 test-startup-failure:
-	bash test/startup-failure-test.sh
+	bash test/resilience/startup-failure-test.sh
 
 ## test-invalid-creds : Test behavior with wrong credentials
 test-invalid-creds:
-	bash test/invalid-credentials-test.sh
+	bash test/validation/invalid-credentials-test.sh
 
-## test-validation : Run all phase-4 validation tests
+## test-validation : Run validation tests
 test-validation: test-pooling test-startup-failure test-invalid-creds
 
 ## test-all  : Run every test sequentially
@@ -92,7 +92,7 @@ helm-uninstall:
 	helm uninstall $(HELM_RELEASE) -n $(NAMESPACE)
 
 # ---------------------------------------------------------------------------
-# Upstream refresh
+# Upstream refresh & release
 # ---------------------------------------------------------------------------
 
 ## refresh         : Refresh pgagroal upstream version (requires VERSION=x.y.z)
@@ -104,6 +104,14 @@ refresh:
 refresh-dry-run:
 	@test -n "$(VERSION)" || { echo "Usage: make refresh-dry-run VERSION=x.y.z"; exit 1; }
 	bash scripts/refresh-pgagroal.sh --version $(VERSION) --dry-run
+
+## prepare-release : Verify consistency and print release commands
+prepare-release:
+	bash scripts/prepare-release.sh
+
+## release-check  : Quick consistency check (non-interactive)
+release-check:
+	bash scripts/prepare-release.sh --check-only
 
 ## test-refresh    : Run refresh script automated tests
 test-refresh:

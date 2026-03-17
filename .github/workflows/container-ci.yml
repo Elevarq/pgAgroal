@@ -78,7 +78,7 @@ jobs:
         run: docker build -t pgagroal:2.0.2 .
 
       - name: Run integration test
-        run: bash test/container-start-test.sh
+        run: bash test/integration/container-start-test.sh
 
   resilience-test:
     name: Backend Restart Resilience
@@ -91,7 +91,7 @@ jobs:
         run: docker build -t pgagroal:2.0.2 .
 
       - name: Run backend restart test
-        run: bash test/backend-restart-test.sh
+        run: bash test/resilience/backend-restart-test.sh
 
   startup-failure-test:
     name: Startup Failure Mode
@@ -104,4 +104,4 @@ jobs:
         run: docker build -t pgagroal:test .
 
       - name: Run startup failure test
-        run: bash test/startup-failure-test.sh
+        run: bash test/resilience/startup-failure-test.sh

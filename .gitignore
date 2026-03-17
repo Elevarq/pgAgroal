@@ -26,5 +26,8 @@ data/
 .vscode/
 *.code-workspace
 
+# sed backup files (macOS)
+*-e
+
 # Helm packaging output
 helm/pgagroal/*.tgz

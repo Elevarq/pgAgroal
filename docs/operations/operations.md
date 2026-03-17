@@ -115,7 +115,7 @@ Start with `cpu: 100m / memory: 64Mi` requests and adjust based on observed usag
 
 ## Credential Rotation
 
-See [test/secret-rotation-procedure.md](../test/secret-rotation-procedure.md) for step-by-step instructions.
+See [test/secret-rotation-procedure.md](secret-rotation-procedure.md) for step-by-step instructions.
 
 ## Troubleshooting Checklist
 
