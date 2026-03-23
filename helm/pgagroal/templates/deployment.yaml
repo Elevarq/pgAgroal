@@ -36,6 +36,13 @@ spec:
           securityContext:
             {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           command: ["sh", "-c", "cp /etc/pgagroal-templates/* /etc/pgagroal/"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
           volumeMounts:
             - name: config-templates
               mountPath: /etc/pgagroal-templates

@@ -1,0 +1,8 @@
+# KSV-0020, KSV-0021: runAsUser/runAsGroup > 10000 — advisory only.
+# UID/GID 1000 is standard for non-root containers. No real security risk.
+KSV-0020
+KSV-0021
+
+# KSV-0110: Default namespace — Helm template; namespace is set at install time
+# via `helm install -n <namespace>`.
+KSV-0110
