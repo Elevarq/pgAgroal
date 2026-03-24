@@ -1,0 +1,233 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/elevarq/pgagroal
+
+jobs:
+  # ── Gate A: Correctness ───────────────────────────────────────────────
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches VERSION file
+        run: |
+          FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "$FILE_VERSION" != "$TAG_VERSION" ]]; then
+            echo "STOP: Tag ${GITHUB_REF_NAME} does not match VERSION file (${FILE_VERSION})"
+            exit 1
+          fi
+          echo "Version consistent: ${TAG_VERSION}"
+
+      - name: Run release consistency checks
+        run: bash scripts/prepare-release.sh --check-only
+
+  test:
+    name: Test Artifact
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pgagroal:${{ needs.validate.outputs.version }} .
+
+      - name: Integration test
+        run: bash test/integration/container-start-test.sh
+
+      - name: Backend restart resilience test
+        run: bash test/resilience/backend-restart-test.sh
+
+      - name: Startup failure test
+        run: bash test/resilience/startup-failure-test.sh
+
+  # ── Gate B: Lint / Quality ────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.2
+
+      - name: Helm lint
+        run: helm lint helm/pgagroal/
+
+  # ── Gate C: Security ──────────────────────────────────────────────────
+  security-scan:
+    name: Security Scan
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image for scanning
+        run: docker build -t pgagroal:scan .
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Trivy config scan
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          scan-type: image
+          image-ref: pgagroal:scan
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ── Gate D + E: Build, Sign & Publish ─────────────────────────────────
+  publish:
+    name: Publish to GHCR
+    needs: [validate, test, lint, security-scan]
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image
+        run: cosign sign --yes ${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+  # ── Gate F: Release ───────────────────────────────────────────────────
+  release:
+    name: GitHub Release
+    needs: [validate, publish]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          # Extract the section for this version from CHANGELOG.md
+          awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" \
+            CHANGELOG.md > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "Release ${VERSION}" > release-notes.md
+          fi
+          # Append supply chain info
+          cat >> release-notes.md <<EOF
+
+          ---
+
+          ## Supply Chain
+
+          - Image: \`${{ env.IMAGE_NAME }}:${VERSION}\`
+          - Digest: \`${{ needs.publish.outputs.digest }}\`
+          - Signed with [cosign](https://github.com/sigstore/cosign) (keyless, GitHub OIDC)
+          - SBOM attached (SPDX JSON)
+
+          Verify signature:
+          \`\`\`bash
+          cosign verify ${{ env.IMAGE_NAME }}:${VERSION} \
+            --certificate-identity-regexp='github.com/Elevarq/' \
+            --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+          \`\`\`
+          EOF
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: sbom.spdx.json
+          generate_release_notes: false
