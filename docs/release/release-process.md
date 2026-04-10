@@ -31,8 +31,8 @@ make helm-template         # render
 Edit `VERSION` and `helm/pgagroal/Chart.yaml` `version` field:
 
 ```bash
-echo "0.2.0" > VERSION
-# Edit Chart.yaml: version: 0.2.0
+echo "1.0.0" > VERSION
+# Edit Chart.yaml: version: 1.0.0
 ```
 
 Update `CHANGELOG.md` with a dated section.
@@ -55,10 +55,10 @@ It then prints the exact git commands to run.
 ## 5. Commit, tag, push
 
 ```bash
-git add -A && git commit -m "Release v0.2.0"
-git tag -a v0.2.0 -m "Release v0.2.0"
+git add -A && git commit -m "Release v1.0.0"
+git tag -a v1.0.0 -m "Release v1.0.0"
 git push origin main
-git push origin v0.2.0
+git push origin v1.0.0
 ```
 
 Pushing the `v*` tag triggers the publish workflow, which builds
@@ -68,11 +68,11 @@ and Cosign signatures.
 ## 6. Post-release
 
 - Verify the publish workflow succeeded: `gh run list --workflow publish.yml --limit 1`
-- Inspect the published manifest: `docker buildx imagetools inspect elevarq/pgagroal:0.2.0-rc1`
+- Inspect the published manifest: `docker buildx imagetools inspect elevarq/pgagroal:1.0.0`
 - Verify Cosign signature: see [release-checklist.md](release-checklist.md#post-release-verification)
-- Check Docker Scout: `docker scout cves registry://elevarq/pgagroal:0.2.0-rc1`
+- Check Docker Scout: `docker scout cves registry://elevarq/pgagroal:1.0.0`
 - Update Docker Hub description if version numbers changed (see [release-checklist.md](release-checklist.md#docker-hub-documentation))
-- Deploy to EKS: `helm upgrade pgagroal helm/pgagroal/ --set image.tag=0.2.0 -n pgagroal`
+- Deploy to EKS: `helm upgrade pgagroal helm/pgagroal/ --set image.tag=1.0.0 -n pgagroal`
 - Run [post-deployment verification](../deployment/post-deployment-verification.md)
 
 ## Quick consistency check

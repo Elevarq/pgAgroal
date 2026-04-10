@@ -9,7 +9,7 @@ docker run -d --name pgagroal \
   -p 6432:6432 \
   -e PG_BACKEND_HOST=192.168.1.100 \
   -e PG_BACKEND_PORT=5432 \
-  elevarq/pgagroal:0.2.0-rc1
+  elevarq/pgagroal:1.0.0
 ```
 
 Change `192.168.1.100` to the address of your PostgreSQL server.
@@ -37,9 +37,9 @@ Configuration is via environment variables. No config files need to be mounted.
 
 | Tag | Description |
 |---|---|
-| `0.2.0` | Current stable release |
-| `0.2` | Latest patch in the 0.2 line |
-| `latest` | Most recent release |
+| `1.0.0` | Current stable release |
+| `1.0` | Latest patch in the 1.0 line |
+| `latest` | Most recent stable release |
 
 Multi-arch: `linux/amd64`, `linux/arm64`.
 
@@ -50,7 +50,7 @@ Images are built by GitHub Actions and signed with [Cosign](https://docs.sigstor
 Verify before deployment:
 
 ```bash
-cosign verify elevarq/pgagroal:0.2.0-rc1 \
+cosign verify elevarq/pgagroal:1.0.0 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -62,14 +62,14 @@ Pin a version tag in Helm values:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "0.2.0"
+  tag: "1.0.0"
   pullPolicy: IfNotPresent
 ```
 
 Verify before rollout:
 
 ```bash
-cosign verify elevarq/pgagroal:0.2.0-rc1 \
+cosign verify elevarq/pgagroal:1.0.0 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```

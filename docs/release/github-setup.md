@@ -32,8 +32,8 @@ To change: Settings > Danger Zone > Change visibility
 
 | Type | Format | Example |
 |---|---|---|
-| Git tag | `v<project-version>` | `v0.2.0` |
-| GitHub release title | `v<project-version>` | `v0.2.0` |
+| Git tag | `v<project-version>` | `v1.0.0` |
+| GitHub release title | `v<project-version>` | `v1.0.0` |
 | Release notes | Auto-generated from CHANGELOG.md | -- |
 
 ## Labels (suggested)

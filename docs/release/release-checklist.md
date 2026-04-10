@@ -28,9 +28,9 @@ Steps to cut a new release of the pgagroal container project.
 
   | File | Field | Tracks | Example |
   |---|---|---|---|
-  | `VERSION` | entire file | project | `0.2.0` |
-  | `helm/pgagroal/Chart.yaml` | `version` | project | `0.2.0` |
-  | `CHANGELOG.md` | new section | project | `## [0.2.0]` |
+  | `VERSION` | entire file | project | `1.0.0` |
+  | `helm/pgagroal/Chart.yaml` | `version` | project | `1.0.0` |
+  | `CHANGELOG.md` | new section | project | `## [1.0.0]` |
   | `Dockerfile` | `ARG PGAGROAL_VERSION` | pgagroal | `2.0.3` |
   | `Makefile` | `IMAGE_TAG` | pgagroal | `2.0.3` |
   | `helm/pgagroal/Chart.yaml` | `appVersion` | pgagroal | `"2.0.3"` |
@@ -50,8 +50,13 @@ Git tag via `docker/metadata-action`:
 
 | Git tag | Docker Hub tags |
 |---|---|
-| `v0.2.0` | `0.2.0`, `0.2`, `latest` |
-| `v0.2.0-rc1` | `0.2.0-rc1` |
+| `v1.0.0` | `1.0.0`, `1.0`, `latest` |
+| `v1.0.1` | `1.0.1`, `1.0`, `latest` |
+| `v1.1.0-rc1` | `1.1.0-rc1` |
+
+Stable releases produce full version, minor alias, and `latest`.
+Release candidates produce only the RC tag — they must not update
+`latest`.
 
 > **WARNING:** Do not push tags based on the pgagroal upstream version
 > (e.g. `2.0.2`, `2.1.0`). These are not valid image versions. The
@@ -222,9 +227,17 @@ The `README.md` Pinned Versions table must also be updated to match.
 
 After tagging, prepare the next development cycle:
 
-1. Bump `VERSION` to the next expected version (e.g. `0.3.0`)
-2. Bump `Chart.yaml` `version` to next patch (e.g. `0.2.0`)
+1. Bump `VERSION` to the next expected version (e.g. `1.1.0`)
+2. Bump `Chart.yaml` `version` to next patch (e.g. `1.1.0`)
 3. Commit as "Prepare next development cycle"
+
+## Release History
+
+| Version | Type | Notes |
+|---|---|---|
+| 0.1.0 | Initial | First container packaging |
+| 0.2.0-rc1 | Pre-release | Transitional release while publish/signing/docs pipeline was stabilized |
+| 1.0.0 | Stable | First stable public release. Establishes the stable versioning line. |
 
 ## Release Pitfalls
 

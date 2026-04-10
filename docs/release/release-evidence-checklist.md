@@ -3,7 +3,7 @@
 Verification steps to confirm a release is complete, correct, and
 auditable. Run after every release tag push.
 
-Replace `${VERSION}` with the release version (e.g. `0.2.0`).
+Replace `${VERSION}` with the release version (e.g. `1.0.0`).
 
 ---
 
