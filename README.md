@@ -108,6 +108,30 @@ make release-check     # non-interactive consistency check
 
 Guide: [docs/release/release-process.md](docs/release/release-process.md) | Checklist: [docs/release/release-checklist.md](docs/release/release-checklist.md)
 
+## Image Verification
+
+Published images are built by GitHub Actions from this repository and
+pushed to Docker Hub as multi-arch manifests (`linux/amd64`,
+`linux/arm64`). Each image includes:
+
+- **SBOM** attestation (build-time software bill of materials)
+- **Provenance** attestation (SLSA, `mode=max`)
+- **Cosign signature** (keyless, via GitHub OIDC)
+
+Verify a signature before deployment:
+
+```bash
+cosign verify elevarq/pgagroal:latest \
+  --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+Inspect attestations:
+
+```bash
+docker buildx imagetools inspect elevarq/pgagroal:latest
+```
+
 ## Project Structure
 
 ```
@@ -134,7 +158,6 @@ Guide: [docs/release/release-process.md](docs/release/release-process.md) | Chec
 - Prometheus metrics validation and Grafana dashboard template
 - Elevarq observability sidecar integration (chart stub exists)
 - TLS termination configuration guide
-- Automated release pipeline via GitHub Actions
 
 ## Pinned Versions
 
