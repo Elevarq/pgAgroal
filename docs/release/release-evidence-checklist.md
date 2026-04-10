@@ -66,6 +66,9 @@ Replace `${VERSION}` with the release version (e.g. `0.2.0`).
     --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
     --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
   ```
+- [ ] **Gate: a release is not complete until both commands above
+  succeed.** "No signatures found" means the signing step did not
+  run — see release-checklist.md for the fix.
 
 ## 5. SBOM and Provenance Attestations
 

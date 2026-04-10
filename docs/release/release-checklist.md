@@ -163,12 +163,26 @@ For the full evidence checklist with audit-grade commands, see
   verify only `linux/amd64` and `linux/arm64` appear, plus
   attestation manifests
 
-- [ ] Cosign signature verifies:
+- [ ] Cosign signature verifies for the release tag:
   ```bash
   cosign verify elevarq/pgagroal:${VERSION} \
     --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
     --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
   ```
+
+- [ ] Cosign signature verifies for `latest`:
+  ```bash
+  cosign verify elevarq/pgagroal:latest \
+    --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+  ```
+
+> **A release is not complete until Cosign verification succeeds.**
+> If `cosign verify` returns "no signatures found", the signing step
+> did not run. The most common cause is that the git tag was created
+> on a commit before the Cosign step existed in the publish workflow.
+> Fix: retag on a commit that includes the signing step, push the
+> tag, and verify again.
 
 - [ ] Docker Scout shows no critical/high vulnerabilities:
   ```bash
