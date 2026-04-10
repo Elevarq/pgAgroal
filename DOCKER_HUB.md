@@ -9,7 +9,7 @@ docker run -d --name pgagroal \
   -p 6432:6432 \
   -e PG_BACKEND_HOST=192.168.1.100 \
   -e PG_BACKEND_PORT=5432 \
-  elevarq/pgagroal:0.2.0
+  elevarq/pgagroal:0.2.0-rc1
 ```
 
 Change `192.168.1.100` to the address of your PostgreSQL server.
@@ -50,7 +50,7 @@ Images are built by GitHub Actions and signed with [Cosign](https://docs.sigstor
 Verify before deployment:
 
 ```bash
-cosign verify elevarq/pgagroal:0.2.0 \
+cosign verify elevarq/pgagroal:0.2.0-rc1 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -69,7 +69,7 @@ image:
 Verify before rollout:
 
 ```bash
-cosign verify elevarq/pgagroal:0.2.0 \
+cosign verify elevarq/pgagroal:0.2.0-rc1 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```

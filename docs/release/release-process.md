@@ -68,9 +68,9 @@ and Cosign signatures.
 ## 6. Post-release
 
 - Verify the publish workflow succeeded: `gh run list --workflow publish.yml --limit 1`
-- Inspect the published manifest: `docker buildx imagetools inspect elevarq/pgagroal:0.2.0`
+- Inspect the published manifest: `docker buildx imagetools inspect elevarq/pgagroal:0.2.0-rc1`
 - Verify Cosign signature: see [release-checklist.md](release-checklist.md#post-release-verification)
-- Check Docker Scout: `docker scout cves registry://elevarq/pgagroal:0.2.0`
+- Check Docker Scout: `docker scout cves registry://elevarq/pgagroal:0.2.0-rc1`
 - Update Docker Hub description if version numbers changed (see [release-checklist.md](release-checklist.md#docker-hub-documentation))
 - Deploy to EKS: `helm upgrade pgagroal helm/pgagroal/ --set image.tag=0.2.0 -n pgagroal`
 - Run [post-deployment verification](../deployment/post-deployment-verification.md)
