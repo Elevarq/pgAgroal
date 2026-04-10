@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-04-10
+
+First stable public release. Establishes the 1.x release line.
+
+### Added
+
+- Multi-arch Docker images (linux/amd64, linux/arm64) built and published via GitHub Actions
+- Cosign keyless image signing (GitHub OIDC) on every release
+- SBOM and SLSA provenance attestations attached at build time
+- Automated publish workflow with tag-triggered CI/CD
+- Complete public documentation: getting started, configuration, Kubernetes deployment, observability, security, and troubleshooting
+- Release evidence checklist and post-release verification procedures
+- Docker Hub repository overview managed from DOCKER_HUB.md
+- Supply chain security documentation aligned with SOC 2 / ISO 27001 readiness
+
+### Changed
+
+- Release versioning standardized at 1.0.0 (0.2.0-rc1 was transitional while the publish and signing pipeline was stabilized)
+- Container runtime hardening: non-root, all capabilities dropped, read-only root filesystem, seccomp RuntimeDefault
+- Helm chart version aligned at 1.0.0
+
+### Pinned versions
+
+- pgagroal: 2.0.2
+- Debian base: bookworm-20260316-slim
+- PostgreSQL (compose): 17.4-bookworm
+
 ## [0.2.0] - 2026-03-23
 
 ### Changed
