@@ -78,7 +78,7 @@ jobs:
         run: docker build -t pgagroal:ci .
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -86,7 +86,7 @@ jobs:
           exit-code: '1'
 
       - name: Run Trivy image scan
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: 'image'
           image-ref: 'pgagroal:ci'
@@ -95,7 +95,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Run Trivy config scan
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: 'config'
           scan-ref: '.'
