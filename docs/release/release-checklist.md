@@ -146,6 +146,9 @@ publishing must go through the publish workflow.
 
 ## Post-release Verification
 
+For the full evidence checklist with audit-grade commands, see
+[release-evidence-checklist.md](release-evidence-checklist.md).
+
 - [ ] Publish workflow succeeded:
   ```bash
   gh run list --workflow publish.yml --limit 1
