@@ -56,16 +56,23 @@ It then prints the exact git commands to run.
 
 ```bash
 git add -A && git commit -m "Release v0.2.0"
-git tag -a v0.2.0 -m "Release v0.2.0 (pgagroal 2.1.0)"
+git tag -a v0.2.0 -m "Release v0.2.0"
 git push origin main
 git push origin v0.2.0
 ```
 
+Pushing the `v*` tag triggers the publish workflow, which builds
+multi-arch images and pushes them to Docker Hub with SBOM, provenance,
+and Cosign signatures.
+
 ## 6. Post-release
 
-- Verify tag on GitHub: `git ls-remote origin | grep v0.2.0`
-- Push image to ECR (see [release-checklist.md](release-checklist.md))
-- Deploy to EKS: `helm upgrade pgagroal helm/pgagroal/ --set image.tag=2.1.0 -n pgagroal`
+- Verify the publish workflow succeeded: `gh run list --workflow publish.yml --limit 1`
+- Inspect the published manifest: `docker buildx imagetools inspect elevarq/pgagroal:0.2.0`
+- Verify Cosign signature: see [release-checklist.md](release-checklist.md#post-release-verification)
+- Check Docker Scout: `docker scout cves registry://elevarq/pgagroal:0.2.0`
+- Update Docker Hub description if version numbers changed (see [release-checklist.md](release-checklist.md#docker-hub-documentation))
+- Deploy to EKS: `helm upgrade pgagroal helm/pgagroal/ --set image.tag=0.2.0 -n pgagroal`
 - Run [post-deployment verification](../deployment/post-deployment-verification.md)
 
 ## Quick consistency check

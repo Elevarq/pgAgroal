@@ -109,13 +109,53 @@ helm package helm/pgagroal/
 # Upload pgagroal-<chart-version>.tgz to your chart repo
 ```
 
-## Post-release
+## Release Flow
 
-- [ ] Git tag the release commit:
+1. Commit version updates to `main` through the normal review process.
+2. Tag and push:
+   ```bash
+   VERSION=$(cat VERSION)
+   git tag -a "v${VERSION}" -m "Release ${VERSION}"
+   git push origin "v${VERSION}"
+   ```
+3. The publish workflow (`.github/workflows/publish.yml`) runs
+   automatically on the `v*` tag push. It builds and pushes:
+   - Multi-arch image index (`linux/amd64`, `linux/arm64`)
+   - SBOM attestation
+   - SLSA provenance attestation (`mode=max`)
+   - Cosign keyless signature (GitHub OIDC)
+   - Tags: `{version}`, `{major}.{minor}`, `latest`
+
+Do not run `docker push` manually to Docker Hub. All Docker Hub
+publishing must go through the publish workflow.
+
+## Post-release Verification
+
+- [ ] Publish workflow succeeded:
   ```bash
-  VERSION=$(cat VERSION)
-  git tag -a "v${VERSION}" -m "Release ${VERSION}"
-  git push origin "v${VERSION}"
+  gh run list --workflow publish.yml --limit 1
+  ```
+
+- [ ] Multi-arch manifest is correct (both platforms present):
+  ```bash
+  docker buildx imagetools inspect elevarq/pgagroal:${VERSION}
+  ```
+
+- [ ] No unexpected platform images (e.g. stale Rocky artifacts):
+  verify only `linux/amd64` and `linux/arm64` appear, plus
+  attestation manifests
+
+- [ ] Cosign signature verifies:
+  ```bash
+  cosign verify elevarq/pgagroal:${VERSION} \
+    --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
+    --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+  ```
+
+- [ ] Docker Scout shows no critical/high vulnerabilities:
+  ```bash
+  docker scout cves registry://elevarq/pgagroal:${VERSION}
+  docker scout cves registry://elevarq/pgagroal:${VERSION} --platform linux/arm64
   ```
 
 - [ ] Update EKS deployments:
@@ -132,6 +172,20 @@ helm package helm/pgagroal/
 
 - [ ] Monitor for errors in the first 15 minutes after deployment
 
+## Docker Hub Documentation
+
+The Docker Hub repository overview is maintained in `DOCKER_HUB.md` at
+the repository root. After any release that changes version numbers,
+features, or verification instructions:
+
+1. Update `DOCKER_HUB.md` in the same commit or a follow-up commit.
+2. Copy the contents to Docker Hub > elevarq/pgagroal > General >
+   Repository overview.
+3. Verify that the Quick Start example, image tags table, and
+   verification commands in Docker Hub match the current release.
+
+The `README.md` Pinned Versions table must also be updated to match.
+
 ## Version Bump After Release
 
 After tagging, prepare the next development cycle:
@@ -139,3 +193,33 @@ After tagging, prepare the next development cycle:
 1. Bump `VERSION` to the next expected version (e.g. `0.3.0`)
 2. Bump `Chart.yaml` `version` to next patch (e.g. `0.2.0`)
 3. Commit as "Prepare next development cycle"
+
+## Release Pitfalls
+
+Lessons learned from past incidents. Review before every release.
+
+**Do not push Docker Hub tags manually.** Manual `docker push` to
+Docker Hub creates images without SBOM, provenance, or Cosign
+signatures. These images score poorly in Docker Scout and cannot be
+verified by downstream users. All Docker Hub publishing must go
+through the CI publish workflow.
+
+**Do not use pgagroal upstream version as an image tag.** The Docker
+Hub tags `2.1.0` and `2.1.1` were manually pushed using the upstream
+version and had to be deleted. Image tags must follow the project
+version (`VERSION` file). See the tagging policy above.
+
+**Stale platform manifests persist.** If a multi-arch manifest is
+pushed with mismatched platform images (e.g. amd64 from Debian, arm64
+from Rocky), Docker Hub retains the stale platform entry until it is
+overwritten by a new push for that platform. The fix is to always
+build all platforms in a single workflow run.
+
+**`latest` must only be managed by CI.** Never manually tag or push
+`latest`. The publish workflow updates `latest` as a multi-arch
+manifest on every release.
+
+**Keep Docker Hub docs in sync.** `DOCKER_HUB.md` is the source of
+truth for the Docker Hub repository overview but is not automatically
+synced. After any release that changes version numbers or verification
+commands, update both the file and the Docker Hub overview.
