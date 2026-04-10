@@ -4,6 +4,12 @@ Production-grade Docker container and Helm chart for [pgagroal](https://github.c
 
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
 
+## Contents
+
+- pgagroal 2.0.2
+- Base image: debian:bookworm-20260316-slim
+- Architectures: amd64, arm64
+
 ## What this is
 
 A ready-to-deploy packaging of pgagroal that builds from source, runs as a non-root container, and deploys to Kubernetes via Helm. Designed for AWS EKS with RDS backends, but works anywhere Docker or Kubernetes runs.

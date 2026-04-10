@@ -8,6 +8,12 @@ Production-ready PostgreSQL connection pooler container.
 - SBOM and SLSA provenance included
 - Hardened runtime (non-root, no capabilities)
 
+## Contents
+
+- pgagroal 2.0.2
+- Base image: debian:bookworm-20260316-slim
+- Architectures: amd64, arm64
+
 ## Quick start
 
 ```bash
