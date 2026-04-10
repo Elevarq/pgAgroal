@@ -54,7 +54,8 @@ docker tag pgagroal:${VERSION} pgagroal:$(echo ${VERSION} | cut -d. -f1-2)
 
 Example: `pgagroal:2.0.3` and `pgagroal:2.0`.
 
-Never publish a `latest` tag. Always pin.
+The publish workflow manages `latest` as a multi-arch manifest.
+Production deployments should pin to a version tag, not `latest`.
 
 ## Publish to ECR
 
