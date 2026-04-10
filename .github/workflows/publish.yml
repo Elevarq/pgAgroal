@@ -56,10 +56,11 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Sign published images
-        env:
-          COSIGN_EXPERIMENTAL: "true"
         run: |
-          images="${{ steps.meta.outputs.tags }}"
-          for tag in $images; do
-            cosign sign --yes "${tag}@${{ steps.build.outputs.digest }}"
+          digest="${{ steps.build.outputs.digest }}"
+          tags="${{ steps.meta.outputs.tags }}"
+          echo "$tags" | while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            echo "Signing ${tag}@${digest}"
+            cosign sign --yes "${tag}@${digest}"
           done
