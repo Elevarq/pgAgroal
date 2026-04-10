@@ -109,6 +109,21 @@ helm package helm/pgagroal/
 # Upload pgagroal-<chart-version>.tgz to your chart repo
 ```
 
+## Release Control Requirements
+
+All releases must satisfy these controls:
+
+- No image may be published to Docker Hub outside of the CI publish
+  workflow. Manual `docker push` is not permitted.
+- Every release must be reproducible: a given git tag must always
+  produce the same image content (modulo base image layer updates).
+- Post-release verification steps (below) must pass before the
+  release is announced or deployed to production.
+- Release tags may only be created by maintainers.
+
+For the full security and supply chain context, see
+[docs/security/supply-chain-and-release-security.md](../security/supply-chain-and-release-security.md).
+
 ## Release Flow
 
 1. Commit version updates to `main` through the normal review process.

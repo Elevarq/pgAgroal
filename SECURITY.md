@@ -33,8 +33,16 @@ This project implements the following security controls:
 - Pinned base image versions (no floating `latest` tags)
 - Multi-stage build (build tools not present in runtime image)
 
+## Supply Chain Security
+
+Images published to Docker Hub are built exclusively by GitHub Actions
+and include SBOM, SLSA provenance, and Cosign keyless signatures. For
+details on build integrity, verification, and auditability, see
+[docs/security/supply-chain-and-release-security.md](docs/security/supply-chain-and-release-security.md).
+
 ## Supported Versions
 
 | Version | Supported |
 |---|---|
-| 0.1.x | Yes |
+| 0.2.x | Yes |
+| 0.1.x | No |
