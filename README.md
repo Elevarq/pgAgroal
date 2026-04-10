@@ -163,9 +163,9 @@ docker buildx imagetools inspect elevarq/pgagroal:latest
 
 | Component | Version |
 |---|---|
-| Project | 0.1.0 |
+| Project | 0.2.0 |
 | pgagroal | 2.0.2 |
-| Debian base | bookworm-20250224-slim |
+| Debian base | bookworm-20260316-slim |
 | PostgreSQL (compose) | 17.4-bookworm |
 | Helm chart | 0.1.0 |
 
