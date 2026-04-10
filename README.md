@@ -132,6 +132,34 @@ Inspect attestations:
 docker buildx imagetools inspect elevarq/pgagroal:latest
 ```
 
+### Kubernetes and Helm
+
+In production, pin a version tag rather than `latest`:
+
+```yaml
+image:
+  repository: elevarq/pgagroal
+  tag: "0.2.0"
+  pullPolicy: IfNotPresent
+```
+
+Verify the pinned image before rolling out:
+
+```bash
+cosign verify elevarq/pgagroal:0.2.0 \
+  --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+Cosign verification confirms the image was signed by the Elevarq GitHub
+Actions workflow. SBOM and provenance attestations provide additional
+supply-chain metadata for audit and compliance.
+
+Clusters that enforce image trust can require valid Cosign signatures at
+admission time using tools such as
+[Sigstore Policy Controller](https://docs.sigstore.dev/policy-controller/overview/)
+or [Kyverno](https://kyverno.io/).
+
 ## Project Structure
 
 ```

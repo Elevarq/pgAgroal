@@ -55,6 +55,27 @@ cosign verify elevarq/pgagroal:0.2.0 \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
+### Kubernetes / Helm
+
+Pin a version tag in Helm values:
+
+```yaml
+image:
+  repository: elevarq/pgagroal
+  tag: "0.2.0"
+  pullPolicy: IfNotPresent
+```
+
+Verify before rollout:
+
+```bash
+cosign verify elevarq/pgagroal:0.2.0 \
+  --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+Clusters that enforce image trust can require valid Cosign signatures at admission time using [Sigstore Policy Controller](https://docs.sigstore.dev/policy-controller/overview/) or [Kyverno](https://kyverno.io/).
+
 ## Source
 
 [github.com/Elevarq/pgAgroal](https://github.com/Elevarq/pgAgroal)
