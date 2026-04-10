@@ -41,20 +41,27 @@ Steps to cut a new release of the pgagroal container project.
 
 - [ ] Review `DEBIAN_VERSION` ARG -- pin to a current bookworm-slim snapshot
 
-## Image Tagging
+## Docker Hub Tagging Policy
 
-Tag the image with both the full version and a `major.minor` alias:
+Docker Hub image tags follow the **project version** (the `VERSION`
+file), not the pgagroal upstream version. The publish workflow
+(`.github/workflows/publish.yml`) derives tags automatically from the
+Git tag via `docker/metadata-action`:
 
-```bash
-VERSION=$(cat VERSION)
+| Git tag | Docker Hub tags |
+|---|---|
+| `v0.2.0` | `0.2.0`, `0.2`, `latest` |
+| `v0.2.0-rc1` | `0.2.0-rc1` |
 
-docker build -t pgagroal:${VERSION} .
-docker tag pgagroal:${VERSION} pgagroal:$(echo ${VERSION} | cut -d. -f1-2)
-```
+> **WARNING:** Do not push tags based on the pgagroal upstream version
+> (e.g. `2.0.2`, `2.1.0`). These are not valid image versions. The
+> pgagroal upstream version is tracked only in:
+> - `Dockerfile` — `ARG PGAGROAL_VERSION`
+> - `helm/pgagroal/Chart.yaml` — `appVersion`
+> - `helm/pgagroal/values.yaml` — `image.tag`
+>
+> It must never appear as a Docker Hub tag.
 
-Example: `pgagroal:2.0.3` and `pgagroal:2.0`.
-
-The publish workflow manages `latest` as a multi-arch manifest.
 Production deployments should pin to a version tag, not `latest`.
 
 ## Publish to ECR
@@ -129,6 +136,6 @@ helm package helm/pgagroal/
 
 After tagging, prepare the next development cycle:
 
-1. Bump `VERSION` to the next expected version (e.g. `2.0.4`)
-2. Bump `Chart.yaml` `version` to next patch (e.g. `0.1.1`)
+1. Bump `VERSION` to the next expected version (e.g. `0.3.0`)
+2. Bump `Chart.yaml` `version` to next patch (e.g. `0.2.0`)
 3. Commit as "Prepare next development cycle"
