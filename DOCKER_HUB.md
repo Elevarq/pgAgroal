@@ -74,9 +74,8 @@ Only CI publishes tags. `latest` is a multi-arch manifest updated on every relea
 
 ## Documentation
 
-- Full README, operations guide, Helm chart, and deployment examples: [github.com/Elevarq/pgAgroal](https://github.com/Elevarq/pgAgroal)
-- Kubernetes / EKS deployment: [docs/deployment](https://github.com/Elevarq/pgAgroal/tree/main/docs/deployment)
-- Operations and failure modes: [docs/operations](https://github.com/Elevarq/pgAgroal/tree/main/docs/operations)
+- Product documentation: [elevarq.com/docs/pgagroal-container](https://elevarq.com/docs/pgagroal-container)
+- Source, full README, operations guide, Helm chart, and deployment examples: [github.com/Elevarq/pgAgroal](https://github.com/Elevarq/pgAgroal)
 
 ## Source and issues
 
