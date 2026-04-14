@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.1] - 2026-04-14
 
 ### Fixed
 
@@ -20,17 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `make test-docker-restart` — resilience test that reproduces the
-  SIGKILL-then-start regression and verifies recovery.
+  SIGKILL-then-start regression and verifies recovery. Also wired into
+  `.github/workflows/container-ci.yml` (PR checks) and the tag-time
+  release pipeline.
+- Full-history gitleaks secret scan on every pull request
+  (`.github/workflows/container-ci.yml`), pinned to gitleaks v8.21.2.
 
 ### Changed
 
 - Release workflow (`.github/workflows/publish.yml`) now enforces all
   six release-protocol gates on every `v*` tag push: validate (tag ↔
-  VERSION, changelog present, `prepare-release.sh --check-only`),
-  test-against-built-artifact (integration + backend-restart +
-  docker-restart + startup-failure), Trivy (fs + config + image) and
-  gitleaks, then the existing multi-arch publish with cosign signing
-  and SBOM/provenance attestations. A new `release` job creates the
+  VERSION, changelog entry present), test-against-built-artifact
+  (integration + backend-restart + docker-restart + startup-failure),
+  security (Trivy fs + config + image, gitleaks full-history), then
+  the existing multi-arch publish with cosign signing and
+  SBOM/provenance attestations. A new `release` job creates the
   GitHub Release with the changelog section and supply-chain metadata.
   Registry, architectures, and signing posture are unchanged.
 

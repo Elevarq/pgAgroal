@@ -24,18 +24,20 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Tag matches VERSION file
+      - name: Tag matches VERSION and Chart.yaml
         run: |
           file_version=$(tr -d '[:space:]' < VERSION)
+          chart_version=$(sed -n 's/^version: //p' helm/pgagroal/Chart.yaml | tr -d '[:space:]')
           tag_version="${GITHUB_REF_NAME#v}"
           if [[ "${file_version}" != "${tag_version}" ]]; then
             echo "STOP: tag ${GITHUB_REF_NAME} does not match VERSION file (${file_version})" >&2
             exit 1
           fi
+          if [[ "${chart_version}" != "${tag_version}" ]]; then
+            echo "STOP: tag ${GITHUB_REF_NAME} does not match Chart.yaml version (${chart_version})" >&2
+            exit 1
+          fi
           echo "Version consistent: ${tag_version}"
-
-      - name: Release consistency check
-        run: bash scripts/prepare-release.sh --check-only
 
       - name: Changelog entry exists
         run: |

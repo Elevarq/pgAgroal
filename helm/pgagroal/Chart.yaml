@@ -2,7 +2,7 @@ apiVersion: v2
 name: pgagroal
 description: pgagroal PostgreSQL connection pooler
 type: application
-version: 1.0.0
+version: 1.0.1
 appVersion: "2.0.2"
 keywords:
   - postgresql

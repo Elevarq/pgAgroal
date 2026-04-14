@@ -145,14 +145,14 @@ In production, pin a version tag rather than `latest`:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "1.0.0"
+  tag: "1.0.1"
   pullPolicy: IfNotPresent
 ```
 
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.0.0 \
+cosign verify elevarq/pgagroal:1.0.1 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -197,11 +197,11 @@ or [Kyverno](https://kyverno.io/).
 
 | Component | Version |
 |---|---|
-| Project | 1.0.0 |
+| Project | 1.0.1 |
 | pgagroal | 2.0.2 |
 | Debian base | bookworm-20260316-slim |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 0.1.0 |
+| Helm chart | 1.0.1 |
 
 ## License
 
