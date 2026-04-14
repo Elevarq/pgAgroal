@@ -1,0 +1,31 @@
+---
+name: Sync Docker Hub description
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'DOCKER_HUB.md'
+      - '.github/workflows/dockerhub-description.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Push DOCKER_HUB.md to Docker Hub
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Docker Hub repository description
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: elevarq/pgagroal
+          readme-filepath: ./DOCKER_HUB.md
+          short-description: >-
+            Production-grade pgagroal PostgreSQL connection pooler —
+            signed, multi-arch, SBOM-attested.
