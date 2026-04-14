@@ -1,3 +1,4 @@
+---
 name: Publish
 
 on:
@@ -6,15 +7,142 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
-  id-token: write   # OIDC token for Sigstore provenance signing
+  contents: write   # create GitHub Release
+  id-token: write   # OIDC token for Sigstore signing + provenance
 
 jobs:
-  publish:
-    name: Build and Publish
+  # ── Gate A.1 + F — tag/VERSION consistency, changelog present ─────────
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Tag matches VERSION file
+        run: |
+          file_version=$(tr -d '[:space:]' < VERSION)
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "${file_version}" != "${tag_version}" ]]; then
+            echo "STOP: tag ${GITHUB_REF_NAME} does not match VERSION file (${file_version})" >&2
+            exit 1
+          fi
+          echo "Version consistent: ${tag_version}"
+
+      - name: Release consistency check
+        run: bash scripts/prepare-release.sh --check-only
+
+      - name: Changelog entry exists
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
+            echo "STOP: CHANGELOG.md has no '## [${version}]' section" >&2
+            exit 1
+          fi
+          echo "Changelog entry present"
+
+  # ── Gate A.2 — test against the built artifact ────────────────────────
+  test:
+    name: Test Artifact
+    needs: validate
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: pgagroal:${{ needs.validate.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Retag for Makefile (IMAGE_TAG)
+        run: docker tag pgagroal:${{ needs.validate.outputs.version }} pgagroal:test
+
+      - name: Integration test
+        run: bash test/integration/container-start-test.sh
+
+      - name: Backend restart resilience test
+        run: bash test/resilience/backend-restart-test.sh
+
+      - name: Docker restart resilience test
+        run: bash test/resilience/docker-restart-test.sh
+
+      - name: Startup failure test
+        run: bash test/resilience/startup-failure-test.sh
+
+  # ── Gate C — security scans against the release commit + image ────────
+  security:
+    name: Security Scan
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # gitleaks needs full history
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: pgagroal:scan
+          cache-from: type=gha
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Trivy config scan
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: image
+          image-ref: pgagroal:scan
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Gitleaks secret scan
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | tar -xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --exit-code 1
+
+  # ── Gate D + E — multi-arch build, push, sign, attest ─────────────────
+  publish:
+    name: Build and Publish
+    needs: [validate, test, security]
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Docker metadata
         id: meta
@@ -64,3 +192,54 @@ jobs:
             echo "Signing ${tag}@${digest}"
             cosign sign --yes "${tag}@${digest}"
           done
+
+  # ── Gate F — GitHub Release with extracted changelog + supply chain ───
+  release:
+    name: GitHub Release
+    needs: [validate, publish]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release notes
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          DIGEST: ${{ needs.publish.outputs.digest }}
+        run: |
+          awk -v v="${VERSION}" '
+            $0 ~ "^## \\[" v "\\]" {found=1; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "Release ${VERSION}" > release-notes.md
+          fi
+
+          cat >> release-notes.md <<EOF
+
+          ---
+
+          ## Supply chain
+
+          - Image: \`elevarq/pgagroal:${VERSION}\`
+          - Digest: \`${DIGEST}\`
+          - Architectures: linux/amd64, linux/arm64
+          - Signed with [cosign](https://github.com/sigstore/cosign) (keyless, GitHub OIDC)
+          - SBOM and SLSA provenance attached as OCI attestations
+
+          Verify signature:
+
+          \`\`\`bash
+          cosign verify elevarq/pgagroal:${VERSION} \\
+            --certificate-identity-regexp='github.com/Elevarq/' \\
+            --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+          \`\`\`
+          EOF
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          generate_release_notes: false
+          fail_on_unmatched_files: false
