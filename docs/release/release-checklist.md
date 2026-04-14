@@ -212,14 +212,18 @@ For the full evidence checklist with audit-grade commands, see
 ## Docker Hub Documentation
 
 The Docker Hub repository overview is maintained in `DOCKER_HUB.md` at
-the repository root. After any release that changes version numbers,
-features, or verification instructions:
+the repository root and synced automatically by
+`.github/workflows/dockerhub-description.yml` whenever that file (or
+the workflow itself) changes on `main`. Manual copy-paste into Docker
+Hub is no longer required.
 
-1. Update `DOCKER_HUB.md` in the same commit or a follow-up commit.
-2. Copy the contents to Docker Hub > elevarq/pgagroal > General >
-   Repository overview.
-3. Verify that the Quick Start example, image tags table, and
-   verification commands in Docker Hub match the current release.
+Release hygiene:
+
+1. Bump version references in `DOCKER_HUB.md` as part of the release
+   PR (alongside `VERSION`, `Chart.yaml`, `README.md`, `CHANGELOG.md`).
+2. After merge, confirm the `Sync Docker Hub description` workflow run
+   on the merge commit succeeded.
+3. Spot-check the Docker Hub overview renders as expected.
 
 The `README.md` Pinned Versions table must also be updated to match.
 
@@ -265,6 +269,9 @@ build all platforms in a single workflow run.
 manifest on every release.
 
 **Keep Docker Hub docs in sync.** `DOCKER_HUB.md` is the source of
-truth for the Docker Hub repository overview but is not automatically
-synced. After any release that changes version numbers or verification
-commands, update both the file and the Docker Hub overview.
+truth for the Docker Hub repository overview and is synced
+automatically by `.github/workflows/dockerhub-description.yml`.
+Historical note: prior releases required a manual copy-paste into
+Docker Hub's General → Repository overview, which drifted in practice.
+The workflow fixes that drift; the file-level version bumps (in the
+release PR) remain a manual step.

@@ -123,6 +123,6 @@ Replace `${VERSION}` with the release version (e.g. `1.0.0`).
 
 - [ ] `README.md` Pinned Versions table matches the release
 - [ ] `DOCKER_HUB.md` references the current version
-- [ ] Docker Hub repository overview matches `DOCKER_HUB.md`
+- [ ] Docker Hub repository overview synced (handled automatically by `.github/workflows/dockerhub-description.yml` on push-to-main; workflow run succeeded)
 - [ ] `CHANGELOG.md` has an entry for this release
 - [ ] `VERSION` file matches the tagged version
