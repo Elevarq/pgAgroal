@@ -1,0 +1,103 @@
+---
+# Weekly check against pgagroal/pgagroal for a new stable release.
+# If the latest upstream stable (x.y.z) differs from what this repo pins,
+# opens a PR with the bump. Review and merge manually — cutting a project
+# release tag (v1.x.y) after merge stays a human decision.
+#
+# PAT note: PRs created with the default GITHUB_TOKEN do not trigger CI
+# workflows (GitHub security restriction). Configure a fine-grained PAT
+# with `contents: write` and `pull-requests: write` on this repo and
+# store it as the repository secret REFRESH_BOT_TOKEN to get CI running
+# automatically on the opened PR. Without it, close+reopen the PR to
+# force CI.
+
+name: Refresh pgagroal upstream
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Mondays 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-pr:
+    name: Check pgagroal upstream, open PR if newer
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve latest pgagroal stable release
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest=$(gh api repos/pgagroal/pgagroal/releases/latest --jq '.tag_name')
+          version="${latest#v}"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Skipping non-stable release: ${latest}"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Upstream latest stable: ${version}"
+
+      - name: Read current pgagroal version
+        id: current
+        run: |
+          current=$(sed -n 's/^ARG PGAGROAL_VERSION=\([0-9.]*\)/\1/p' Dockerfile)
+          echo "version=${current}" >> "$GITHUB_OUTPUT"
+          echo "Current pinned version: ${current}"
+
+      - name: Decide whether to refresh
+        id: decide
+        if: steps.upstream.outputs.skip != 'true'
+        run: |
+          if [[ "${{ steps.upstream.outputs.version }}" == "${{ steps.current.outputs.version }}" ]]; then
+            echo "Already on pgagroal ${{ steps.current.outputs.version }}. Nothing to do."
+            echo "refresh=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "refresh=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run refresh script
+        if: steps.decide.outputs.refresh == 'true'
+        run: |
+          bash scripts/refresh-pgagroal.sh \
+            --version ${{ steps.upstream.outputs.version }} \
+            --skip-tests \
+            --update-changelog
+
+      - name: Open pull request
+        if: steps.decide.outputs.refresh == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.REFRESH_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: automation/refresh-pgagroal-${{ steps.upstream.outputs.version }}
+          delete-branch: true
+          commit-message: |
+            chore: refresh pgagroal upstream to ${{ steps.upstream.outputs.version }}
+
+            Automated by .github/workflows/refresh-pgagroal-upstream.yml
+          title: "chore: refresh pgagroal upstream to ${{ steps.upstream.outputs.version }}"
+          labels: |
+            automation
+            upstream-refresh
+          body: |
+            Automated upstream refresh.
+
+            **pgagroal**: `${{ steps.current.outputs.version }}` → `${{ steps.upstream.outputs.version }}`
+
+            Upstream release notes: https://github.com/pgagroal/pgagroal/releases/tag/${{ steps.upstream.outputs.version }}
+
+            ## Review checklist
+
+            - Read upstream release notes for behavioral changes, deprecations, or new config keys.
+            - Confirm CI (lint, tests, Trivy, gitleaks) is green on this PR.
+            - After merge, decide whether this warrants a `v1.x.y` project release tag. The tag is not cut automatically.
+
+            ## CI trigger note
+
+            If this PR shows no CI checks running, close and immediately reopen it (or push an empty commit). PRs created with the default `GITHUB_TOKEN` cannot fire other workflows — this is a GitHub security feature. Configure a PAT as `REFRESH_BOT_TOKEN` to remove the friction; the workflow picks it up automatically.
