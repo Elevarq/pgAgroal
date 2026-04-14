@@ -22,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make test-docker-restart` — resilience test that reproduces the
   SIGKILL-then-start regression and verifies recovery.
 
+### Changed
+
+- Release workflow (`.github/workflows/publish.yml`) now enforces all
+  six release-protocol gates on every `v*` tag push: validate (tag ↔
+  VERSION, changelog present, `prepare-release.sh --check-only`),
+  test-against-built-artifact (integration + backend-restart +
+  docker-restart + startup-failure), Trivy (fs + config + image) and
+  gitleaks, then the existing multi-arch publish with cosign signing
+  and SBOM/provenance attestations. A new `release` job creates the
+  GitHub Release with the changelog section and supply-chain metadata.
+  Registry, architectures, and signing posture are unchanged.
+
 ## [1.0.0] - 2026-04-10
 
 First stable public release. Establishes the 1.x release line.
