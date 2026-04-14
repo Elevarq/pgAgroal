@@ -17,13 +17,13 @@ Production-ready PostgreSQL connection pooler container.
 ## Quick start
 
 ```bash
-docker pull elevarq/pgagroal:1.0.0
+docker pull elevarq/pgagroal:1.0.1
 ```
 
 ## Verify
 
 ```bash
-cosign verify elevarq/pgagroal:1.0.0 \
+cosign verify elevarq/pgagroal:1.0.1 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
