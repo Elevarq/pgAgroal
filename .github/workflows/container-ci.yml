@@ -102,6 +102,23 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
 
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for commit-range scanning
+
+      - name: Run gitleaks
+        env:
+          GITLEAKS_VERSION: 8.21.2
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSL "${base}/v${GITLEAKS_VERSION}/${tarball}" | tar -xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --exit-code 1
+
   integration-test:
     name: Integration Test
     needs: [build]
