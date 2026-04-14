@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Container now survives `docker restart` (or any stop/start cycle) after
+  an ungraceful termination. Upstream pgagroal removes its PID file on
+  SIGTERM only; on SIGKILL / OOM / stop-grace expiry the stale
+  `/tmp/pgagroal.<port>.pid` was left on the writable layer and blocked
+  the next start with `pgagroal: PID file ... exists, is there another
+  instance running ?`. The entrypoint now removes any stale PID file
+  before exec'ing pgagroal. Spec: `specifications/docker-restart-resilience/`.
+
+### Added
+
+- `make test-docker-restart` — resilience test that reproduces the
+  SIGKILL-then-start regression and verifies recovery.
+
 ## [1.0.0] - 2026-04-10
 
 First stable public release. Establishes the 1.x release line.

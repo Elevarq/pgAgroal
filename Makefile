@@ -5,7 +5,7 @@ HELM_RELEASE := pgagroal
 HELM_CHART   := helm/pgagroal
 NAMESPACE    := pgagroal
 
-.PHONY: build run test test-backend-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
+.PHONY: build run test test-backend-restart test-docker-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
 
 # ---------------------------------------------------------------------------
 # Docker
@@ -28,6 +28,10 @@ test:
 test-backend-restart:
 	bash test/resilience/backend-restart-test.sh
 
+## test-docker-restart : Test container recovery after SIGKILL + docker start (stale PID file)
+test-docker-restart:
+	bash test/resilience/docker-restart-test.sh
+
 ## test-concurrent : Test concurrent connections (default 20, override: make test-concurrent CONCURRENCY=50)
 test-concurrent:
 	bash test/resilience/concurrent-connection-test.sh $(CONCURRENCY)
@@ -48,7 +52,7 @@ test-invalid-creds:
 test-validation: test-pooling test-startup-failure test-invalid-creds
 
 ## test-all  : Run every test sequentially
-test-all: test test-backend-restart test-concurrent test-validation
+test-all: test test-backend-restart test-docker-restart test-concurrent test-validation
 
 ## stop      : Stop all services
 stop:
