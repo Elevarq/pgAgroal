@@ -34,6 +34,12 @@ fi
 
 echo "Starting pgagroal on ${PGAGROAL_HOST}:${PGAGROAL_PORT} -> ${PG_BACKEND_HOST}:${PG_BACKEND_PORT}"
 
+# Upstream pgagroal does not remove its PID file on SIGKILL/OOM/crash,
+# so a stale /tmp/pgagroal.<port>.pid on the writable layer blocks the
+# next start. Safe because pgagroal is PID 1: if we are starting, no
+# prior pgagroal process can still be alive in this container.
+rm -f "/tmp/pgagroal.${PGAGROAL_PORT}.pid"
+
 # ── Start pgagroal in foreground ──────────────────────────────────────────────
 # pgagroal 2.0.x runs in foreground by default (no -d flag).
 # The -d flag means "daemon mode" and conflicts with log_type=console.
