@@ -1,0 +1,35 @@
+---
+# Dependabot configuration.
+#
+# - GitHub Actions: version bumps for all `uses:` in .github/workflows/
+# - Docker: base image pins in Dockerfile (debian:bookworm-*-slim).
+#
+# pgagroal upstream version is NOT tracked here — it's built from source
+# (not pulled as an image). See .github/workflows/refresh-pgagroal-upstream.yml
+# for pgagroal version tracking.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - automation
+      - dependencies
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels:
+      - automation
+      - dependencies
+    commit-message:
+      prefix: "ci"
