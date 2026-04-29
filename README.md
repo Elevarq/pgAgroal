@@ -6,7 +6,7 @@ Production-grade Docker container and Helm chart for [pgagroal](https://github.c
 
 ## Contents
 
-- pgagroal 2.0.2
+- pgagroal 2.1.0
 - Base image: debian:bookworm-20260316-slim
 - Architectures: amd64, arm64
 
@@ -197,11 +197,11 @@ or [Kyverno](https://kyverno.io/).
 
 | Component | Version |
 |---|---|
-| Project | 1.0.1 |
-| pgagroal | 2.0.2 |
+| Project | 1.1.0-rc1 |
+| pgagroal | 2.1.0 |
 | Debian base | bookworm-20260316-slim |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 1.0.1 |
+| Helm chart | 1.1.0-rc1 |
 
 ## License
 

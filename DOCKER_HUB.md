@@ -4,7 +4,7 @@ Production-grade container image for [pgagroal](https://github.com/pgagroal/pgag
 
 ## Why this image
 
-- **Reproducible builds** from pinned source (pgagroal 2.0.2, Debian bookworm).
+- **Reproducible builds** from pinned source (pgagroal 2.1.0, Debian bookworm).
 - **Multi-arch** manifests: `linux/amd64` and `linux/arm64`.
 - **Signed with cosign** (keyless, GitHub OIDC) on every release.
 - **SBOM + SLSA provenance** attached as OCI attestations.
@@ -15,13 +15,13 @@ Production-grade container image for [pgagroal](https://github.com/pgagroal/pgag
 ## Quick start
 
 ```bash
-docker pull elevarq/pgagroal:1.0.1
+docker pull elevarq/pgagroal:1.1.0-rc1
 
 docker run -d --name pgagroal \
   -p 6432:6432 \
   -e PG_BACKEND_HOST=your-postgres-host \
   -e PG_BACKEND_PORT=5432 \
-  elevarq/pgagroal:1.0.1
+  elevarq/pgagroal:1.1.0-rc1
 
 psql -h localhost -p 6432 -U youruser -d yourdb -c 'SELECT 1;'
 ```
@@ -29,7 +29,7 @@ psql -h localhost -p 6432 -U youruser -d yourdb -c 'SELECT 1;'
 ## Verify
 
 ```bash
-cosign verify elevarq/pgagroal:1.0.1 \
+cosign verify elevarq/pgagroal:1.1.0-rc1 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
