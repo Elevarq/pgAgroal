@@ -166,6 +166,27 @@ if [[ -f DOCKER_HUB.md ]]; then
     fi
 fi
 
+# F9: README.md and DOCKER_HUB.md must not contain stale elevarq/pgagroal:<old>
+# refs (any image-tag reference whose version differs from current VERSION).
+# Spec: specifications/project-release/spec.md (ACTIVE), Gate F.
+F9_FAIL=0
+for f9_file in README.md DOCKER_HUB.md; do
+    [[ -f "${f9_file}" ]] || continue
+    while IFS=: read -r f9_line f9_match; do
+        f9_ver=${f9_match#*elevarq/pgagroal:}
+        f9_ver=${f9_ver%%[^0-9.rc-]*}
+        if [[ -n "${f9_ver}" ]] && [[ "${f9_ver}" != "${PROJECT_VERSION}" ]]; then
+            warn "F9: ${f9_file}:${f9_line} contains stale image ref elevarq/pgagroal:${f9_ver} (expected ${PROJECT_VERSION})"
+            F9_FAIL=1
+        fi
+    done < <(grep -nEo 'elevarq/pgagroal:[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?' "${f9_file}" 2>/dev/null || true)
+done
+if [[ "${F9_FAIL}" -eq 0 ]]; then
+    ok "F9: README.md and DOCKER_HUB.md only reference elevarq/pgagroal:${PROJECT_VERSION}"
+else
+    ERRORS=$((ERRORS + 1))
+fi
+
 echo ""
 
 if [[ "${ERRORS}" -gt 0 ]]; then

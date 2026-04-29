@@ -62,6 +62,15 @@ set_dockerhub_project_pin() {
     sed -i'' -e "s|elevarq/pgagroal:[0-9][0-9.]*|elevarq/pgagroal:${v}|g" "${WORKDIR}/DOCKER_HUB.md"
 }
 
+# Normalize all elevarq/pgagroal:<X.Y.Z> refs in README.md to the given version.
+# Required by F9: tests that don't run at the source's current VERSION must
+# bring the README's image-tag examples in line, otherwise F9 correctly
+# flags them as stale.
+set_readme_image_refs() {
+    local v="$1"
+    sed -i'' -e "s|elevarq/pgagroal:[0-9][0-9.]*\(-rc[0-9]*\)\{0,1\}|elevarq/pgagroal:${v}|g" "${WORKDIR}/README.md"
+}
+
 run_check() {
     set +e
     OUT=$(cd "${WORKDIR}" && bash scripts/prepare-release.sh --check-only 2>&1)
@@ -256,7 +265,10 @@ Class: breaking-config
 
 - Vault rotation required.
 EOF
-# NB: migration doc deliberately not created
+# Source has docs/operations/migrations/1.1.0.md (from the real v1.1.0
+# release); the fixture must explicitly remove it to recreate the
+# "no migration doc" failure mode F5 guards against.
+rm -f "${WORKDIR}/docs/operations/migrations/1.1.0.md"
 git -C "${WORKDIR}" -c user.email=t@t -c user.name=t commit -q -am fixture
 run_check
 assert_exit "exit 1" 1 "${RC}"
@@ -271,6 +283,7 @@ echo "--- AC-11b: non-breaking does not require migration doc ---"
 setup_worktree
 set_project_version "1.0.2"
 set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
+set_readme_image_refs "1.0.2"
 set_dockerhub_project_pin "1.0.2"
 write_changelog <<'EOF'
 # Changelog
@@ -321,6 +334,7 @@ echo "--- AC-12b: fix class has no extra requirement ---"
 setup_worktree
 set_project_version "1.0.2"
 set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
+set_readme_image_refs "1.0.2"
 set_dockerhub_project_pin "1.0.2"
 write_changelog <<'EOF'
 # Changelog
@@ -390,6 +404,96 @@ git -C "${WORKDIR}" -c user.email=t@t -c user.name=t commit -q -am fixture
 run_check
 assert_exit "exit 1" 1 "${RC}"
 assert_contains "F8 cited" "${OUT}" "F8"
+cleanup_worktree
+
+# --------------------------------------------------------------------------
+# AC-30: F9 — README + DOCKER_HUB only reference current VERSION  [gate-F]
+# --------------------------------------------------------------------------
+echo "--- AC-30: F9 happy — no stale image refs ---"
+setup_worktree
+set_project_version "1.1.0"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
+set_dockerhub_project_pin "1.1.0"
+# Normalize README so any pre-existing image refs are at 1.1.0 too.
+sed -i'' -e 's|elevarq/pgagroal:[0-9][0-9.]*|elevarq/pgagroal:1.1.0|g' "${WORKDIR}/README.md"
+write_changelog <<'EOF'
+# Changelog
+
+## [1.1.0] - 2026-04-29
+
+Class: feature
+
+### Added
+
+- thing.
+EOF
+git -C "${WORKDIR}" -c user.email=t@t -c user.name=t commit -q -am fixture
+run_check
+assert_exit "exit 0" 0 "${RC}"
+assert_contains "F9 ok" "${OUT}" "F9"
+cleanup_worktree
+
+# --------------------------------------------------------------------------
+# AC-31: F9 — stale image ref in README.md  [gate-F] [failure]
+# --------------------------------------------------------------------------
+echo "--- AC-31: F9 stale ref in README.md ---"
+setup_worktree
+set_project_version "1.1.0"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
+set_dockerhub_project_pin "1.1.0"
+sed -i'' -e 's|elevarq/pgagroal:[0-9][0-9.]*|elevarq/pgagroal:1.1.0|g' "${WORKDIR}/README.md"
+# Inject a stale ref (mimics the real-world bug PR #22 fixed)
+echo "" >> "${WORKDIR}/README.md"
+echo "Old example: elevarq/pgagroal:1.0.1" >> "${WORKDIR}/README.md"
+write_changelog <<'EOF'
+# Changelog
+
+## [1.1.0] - 2026-04-29
+
+Class: feature
+
+### Added
+
+- thing.
+EOF
+git -C "${WORKDIR}" -c user.email=t@t -c user.name=t commit -q -am fixture
+run_check
+assert_exit "exit 1" 1 "${RC}"
+assert_contains "F9 cited" "${OUT}" "F9"
+assert_contains "names stale version" "${OUT}" "1\\.0\\.1"
+assert_contains "names file" "${OUT}" "README\\.md"
+cleanup_worktree
+
+# --------------------------------------------------------------------------
+# AC-32: F9 — stale image ref in DOCKER_HUB.md  [gate-F] [failure]
+# --------------------------------------------------------------------------
+echo "--- AC-32: F9 stale ref in DOCKER_HUB.md ---"
+setup_worktree
+set_project_version "1.1.0"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
+sed -i'' -e 's|elevarq/pgagroal:[0-9][0-9.]*|elevarq/pgagroal:1.1.0|g' "${WORKDIR}/README.md"
+set_dockerhub_project_pin "1.1.0"
+# Inject a leftover stale ref (mimics the "Versioning and tags" table row
+# that PR #22 had to fix)
+echo "" >> "${WORKDIR}/DOCKER_HUB.md"
+echo "Older release: elevarq/pgagroal:1.0.1 — pin if you need the 1.0 line" >> "${WORKDIR}/DOCKER_HUB.md"
+write_changelog <<'EOF'
+# Changelog
+
+## [1.1.0] - 2026-04-29
+
+Class: feature
+
+### Added
+
+- thing.
+EOF
+git -C "${WORKDIR}" -c user.email=t@t -c user.name=t commit -q -am fixture
+run_check
+assert_exit "exit 1" 1 "${RC}"
+assert_contains "F9 cited" "${OUT}" "F9"
+assert_contains "names stale version" "${OUT}" "1\\.0\\.1"
+assert_contains "names file" "${OUT}" "DOCKER_HUB\\.md"
 cleanup_worktree
 
 # ── results ───────────────────────────────────────────────────────────────────
