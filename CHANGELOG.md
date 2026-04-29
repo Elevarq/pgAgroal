@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0-rc1] - 2026-04-29
+## [1.1.0] - 2026-04-29
 
 Class: breaking-config
 
@@ -15,7 +15,7 @@ Upstream pgagroal 2.1.0 introduces breaking changes to the vault
 encryption format and the management wire protocol. Operators must
 regenerate the master key, delete and re-add all users, and upgrade
 the server and every `pgagroal-cli` / `pgagroal-vault` client
-together. See [docs/operations/migrations/1.1.0-rc1.md](docs/operations/migrations/1.1.0-rc1.md)
+together. See [docs/operations/migrations/1.1.0.md](docs/operations/migrations/1.1.0.md)
 for the full procedure.
 
 ### Changed
@@ -25,22 +25,30 @@ for the full procedure.
   web console, AES-256-GCM vault encryption with per-installation
   salt and 600,000 PBKDF2 iterations, RFC 4013 SASLprep on passwords.
 - Helm chart `appVersion` 2.0.2 → 2.1.0
-- Helm chart `version` 1.0.1 → 1.1.0-rc1
-- README, DOCKER_HUB.md image references updated to 1.1.0-rc1
+- Helm chart `version` 1.0.1 → 1.1.0
+- README, DOCKER_HUB.md image references updated to 1.1.0
 
 ### Added
 
-- `docs/operations/migrations/1.1.0-rc1.md` — vault re-initialization
+- `docs/operations/migrations/1.1.0.md` — vault re-initialization
   and synchronized client upgrade procedure for operators upgrading
   from 1.0.x.
 
-### Notes
+### Remaining base image CVEs (unfixed upstream)
 
-This is a release candidate. The image is published as
-`elevarq/pgagroal:1.1.0-rc1` only; it does not promote `1.1`,
-`latest`, or any stable alias. After RC soak validation against a
-non-production environment exercising the vault migration, a
-follow-up commit and tag will cut `v1.1.0`.
+These advisories were flagged by Trivy on `pgagroal:1.1.0`. None of
+the affected libraries are linked by any pgagroal binary (verified
+via `ldd` on `pgagroal`, `pgagroal-cli`, and `pgagroal-admin`); they
+are present in the image as transitive dependencies of
+`postgresql-client` and apt tooling but never loaded into a pgagroal
+process.
+
+- CVE-2023-45853 (CRITICAL, zlib, `will_not_fix`) — minizip API only, not used by pgagroal
+- CVE-2026-0861 (HIGH, glibc) — no Debian patch available
+- CVE-2023-2953 (HIGH, openldap) — no Debian patch available
+- CVE-2026-41989 (HIGH, libgcrypt20) — DoS via crafted ECDH; libgcrypt not linked by pgagroal binaries
+- CVE-2026-29111 (HIGH, systemd) — IPC-driven RCE; container has no systemd, library not loaded
+- CVE-2025-69720 (HIGH, ncurses / libtinfo6) — buffer overflow; not linked by pgagroal binaries
 
 ## [1.0.1] - 2026-04-14
 

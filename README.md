@@ -197,11 +197,11 @@ or [Kyverno](https://kyverno.io/).
 
 | Component | Version |
 |---|---|
-| Project | 1.1.0-rc1 |
+| Project | 1.1.0 |
 | pgagroal | 2.1.0 |
 | Debian base | bookworm-20260316-slim |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 1.1.0-rc1 |
+| Helm chart | 1.1.0 |
 
 ## License
 
