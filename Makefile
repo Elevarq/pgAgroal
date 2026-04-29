@@ -1,5 +1,5 @@
 IMAGE_NAME   := pgagroal
-IMAGE_TAG    := 2.0.2
+IMAGE_TAG    := 2.1.0
 COMPOSE      := docker compose
 HELM_RELEASE := pgagroal
 HELM_CHART   := helm/pgagroal

@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-rc1] - 2026-04-29
+
+Class: breaking-config
+
+### Migration
+
+Upstream pgagroal 2.1.0 introduces breaking changes to the vault
+encryption format and the management wire protocol. Operators must
+regenerate the master key, delete and re-add all users, and upgrade
+the server and every `pgagroal-cli` / `pgagroal-vault` client
+together. See [docs/operations/migrations/1.1.0-rc1.md](docs/operations/migrations/1.1.0-rc1.md)
+for the full procedure.
+
+### Changed
+
+- Bump pgagroal from 2.0.2 to 2.1.0 (upstream feature release).
+  Highlights: built-in health check, improved failover, Prometheus
+  web console, AES-256-GCM vault encryption with per-installation
+  salt and 600,000 PBKDF2 iterations, RFC 4013 SASLprep on passwords.
+- Helm chart `appVersion` 2.0.2 → 2.1.0
+- Helm chart `version` 1.0.1 → 1.1.0-rc1
+- README, DOCKER_HUB.md image references updated to 1.1.0-rc1
+
+### Added
+
+- `docs/operations/migrations/1.1.0-rc1.md` — vault re-initialization
+  and synchronized client upgrade procedure for operators upgrading
+  from 1.0.x.
+
+### Notes
+
+This is a release candidate. The image is published as
+`elevarq/pgagroal:1.1.0-rc1` only; it does not promote `1.1`,
+`latest`, or any stable alias. After RC soak validation against a
+non-production environment exercising the vault migration, a
+follow-up commit and tag will cut `v1.1.0`.
+
 ## [1.0.1] - 2026-04-14
 
 Class: fix

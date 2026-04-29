@@ -4,7 +4,7 @@
 # https://github.com/pgagroal/pgagroal
 
 ARG DEBIAN_VERSION=bookworm-20260316-slim
-ARG PGAGROAL_VERSION=2.0.2
+ARG PGAGROAL_VERSION=2.1.0
 
 # =============================================================================
 # Stage 1: Build pgagroal from source
