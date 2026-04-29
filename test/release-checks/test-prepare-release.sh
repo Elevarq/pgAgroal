@@ -15,6 +15,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PASS=0
 FAIL=0
 
+# Baseline pgagroal version pinned in the real Dockerfile. Tests pin the
+# README pgagroal row to this so F7 (README ↔ Dockerfile match) passes by
+# default; tests that exercise F7 mismatch use a different value explicitly.
+BASELINE_PGAGROAL=$(sed -n 's/^ARG PGAGROAL_VERSION=\([0-9.]*\)/\1/p' "${SCRIPT_DIR}/Dockerfile")
+
 # ── test harness ──────────────────────────────────────────────────────────────
 
 WORKDIR=""
@@ -72,6 +77,7 @@ assert_exit() {
     else
         echo "  FAIL: ${name} (expected exit ${expected}, got ${actual})"
         echo "  ----- output -----"
+        # shellcheck disable=SC2001 # sed is the right tool for a per-line prefix
         echo "${OUT}" | sed 's/^/    /'
         echo "  ------------------"
         FAIL=$((FAIL + 1))
@@ -111,7 +117,7 @@ echo ""
 echo "--- AC-08: dated section present ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.1.0"
 write_changelog <<'EOF'
 # Changelog
@@ -136,7 +142,7 @@ cleanup_worktree
 echo "--- AC-09: dated section missing ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.1.0"
 write_changelog <<'EOF'
 # Changelog
@@ -160,7 +166,7 @@ cleanup_worktree
 echo "--- AC-10: Class field present and valid ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.1.0"
 write_changelog <<'EOF'
 # Changelog
@@ -188,7 +194,7 @@ cleanup_worktree
 echo "--- AC-10b: Class field missing ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.1.0"
 write_changelog <<'EOF'
 # Changelog
@@ -211,7 +217,7 @@ cleanup_worktree
 echo "--- AC-10c: Class field invalid value ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.1.0"
 write_changelog <<'EOF'
 # Changelog
@@ -237,7 +243,7 @@ cleanup_worktree
 echo "--- AC-11: breaking-config without migration doc ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.1.0"
 write_changelog <<'EOF'
 # Changelog
@@ -264,7 +270,7 @@ cleanup_worktree
 echo "--- AC-11b: non-breaking does not require migration doc ---"
 setup_worktree
 set_project_version "1.0.2"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.0.2"
 write_changelog <<'EOF'
 # Changelog
@@ -289,7 +295,7 @@ cleanup_worktree
 echo "--- AC-12: security without Security subsection ---"
 setup_worktree
 set_project_version "1.0.3"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.0.3"
 write_changelog <<'EOF'
 # Changelog
@@ -314,7 +320,7 @@ cleanup_worktree
 echo "--- AC-12b: fix class has no extra requirement ---"
 setup_worktree
 set_project_version "1.0.2"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 set_dockerhub_project_pin "1.0.2"
 write_changelog <<'EOF'
 # Changelog
@@ -366,7 +372,7 @@ cleanup_worktree
 echo "--- AC-29: DOCKER_HUB.md references stale version ---"
 setup_worktree
 set_project_version "1.1.0"
-set_readme_pgagroal_pin "2.0.2"
+set_readme_pgagroal_pin "${BASELINE_PGAGROAL}"
 # DOCKER_HUB.md still references 1.0.1, not the new 1.1.0
 set_dockerhub_project_pin "1.0.1"
 write_changelog <<'EOF'

@@ -13,6 +13,10 @@ REFRESH="${SCRIPT_DIR}/scripts/refresh-pgagroal.sh"
 PASS=0
 FAIL=0
 
+# Current pgagroal pin in the real Dockerfile. Used by idempotency and
+# update-changelog assertions so they don't drift when the upstream pin bumps.
+BASELINE_PGAGROAL=$(sed -n 's/^ARG PGAGROAL_VERSION=\([0-9.]*\)/\1/p' "${SCRIPT_DIR}/Dockerfile")
+
 # ── test harness ──────────────────────────────────────────────────────────────
 
 WORKDIR=""
@@ -199,11 +203,11 @@ exec /usr/bin/docker "$@"
 MOCK
 chmod +x "${WORKDIR}/.mockbin/docker"
 set +e
-out=$(cd "${WORKDIR}" && PATH="${WORKDIR}/.mockbin:${PATH}" bash "${WORKDIR}/scripts/refresh-pgagroal.sh" --version 2.0.2 --skip-tests 2>&1)
+out=$(cd "${WORKDIR}" && PATH="${WORKDIR}/.mockbin:${PATH}" bash "${WORKDIR}/scripts/refresh-pgagroal.sh" --version "${BASELINE_PGAGROAL}" --skip-tests 2>&1)
 rc=$?
 set -e
 assert_exit "exit code" 0 "${rc}"
-assert_file_contains "Dockerfile unchanged" "${WORKDIR}/Dockerfile" "ARG PGAGROAL_VERSION=2.0.2"
+assert_file_contains "Dockerfile unchanged" "${WORKDIR}/Dockerfile" "ARG PGAGROAL_VERSION=${BASELINE_PGAGROAL}"
 assert_contains "summary shows success" "${out}" "SUCCESS"
 cleanup_worktree
 
@@ -223,7 +227,7 @@ rc=$?
 set -e
 assert_exit "exit code" 0 "${rc}"
 assert_file_contains "changelog has unreleased" "${WORKDIR}/CHANGELOG.md" "Unreleased"
-assert_file_contains "changelog has bump line" "${WORKDIR}/CHANGELOG.md" "Bump pgagroal from 2.0.2 to 3.0.0"
+assert_file_contains "changelog has bump line" "${WORKDIR}/CHANGELOG.md" "Bump pgagroal from ${BASELINE_PGAGROAL} to 3.0.0"
 assert_file_contains "changelog preserves old content" "${WORKDIR}/CHANGELOG.md" "0.1.0"
 cleanup_worktree
 
