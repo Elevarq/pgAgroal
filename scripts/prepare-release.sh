@@ -95,6 +95,77 @@ else
     ok "tag ${TAG} does not exist yet"
 fi
 
+# ── Gate F: release hygiene checks (F3–F8) ────────────────────────────────────
+# Spec: specifications/project-release/spec.md (ACTIVE)
+
+# F3: CHANGELOG.md has a dated section for the release version
+SECTION_START=""
+if [[ -f CHANGELOG.md ]]; then
+    SECTION_START=$(grep -nE "^## \[${PROJECT_VERSION//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}" CHANGELOG.md 2>/dev/null | head -1 | cut -d: -f1 || true)
+fi
+if [[ -n "${SECTION_START}" ]]; then
+    ok "F3: CHANGELOG.md has dated section for ${PROJECT_VERSION}"
+else
+    warn "F3: CHANGELOG.md has no '## [${PROJECT_VERSION}] - YYYY-MM-DD' section"
+    ERRORS=$((ERRORS + 1))
+fi
+
+# F4-F6: release class field + class-specific extra requirements
+# Only evaluated if F3 found a section to inspect.
+CLASS_VALUE=""
+if [[ -n "${SECTION_START}" ]]; then
+    SECTION_BODY=$(awk -v start="${SECTION_START}" 'NR>start { if (/^## /) exit; print }' CHANGELOG.md)
+    CLASS_LINE=$(echo "${SECTION_BODY}" | grep -m1 -vE '^[[:space:]]*$' || true)
+    if [[ "${CLASS_LINE}" =~ ^Class:[[:space:]]+(feature|fix|security|breaking-config)[[:space:]]*$ ]]; then
+        CLASS_VALUE="${BASH_REMATCH[1]}"
+        ok "F4: Class is '${CLASS_VALUE}'"
+    else
+        warn "F4: ${PROJECT_VERSION} section needs 'Class: <value>' as the first non-blank line, where <value> is one of: feature, fix, security, breaking-config"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# F5: breaking-config requires migration doc
+if [[ "${CLASS_VALUE}" = "breaking-config" ]]; then
+    if [[ -f "docs/operations/migrations/${PROJECT_VERSION}.md" ]]; then
+        ok "F5: migration doc docs/operations/migrations/${PROJECT_VERSION}.md exists"
+    else
+        warn "F5: Class is breaking-config but docs/operations/migrations/${PROJECT_VERSION}.md is missing"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# F6: security requires a ### Security subsection
+if [[ "${CLASS_VALUE}" = "security" ]]; then
+    if echo "${SECTION_BODY}" | grep -qE '^### Security[[:space:]]*$'; then
+        ok "F6: ### Security subsection present"
+    else
+        warn "F6: Class is security but ### Security subsection is missing in the ${PROJECT_VERSION} changelog section"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# F7: README.md "Pinned versions" pgagroal row matches Dockerfile pin
+if [[ -f README.md ]]; then
+    README_PG_PIN=$(sed -n 's/^| pgagroal | \([^ |]*\) |.*/\1/p' README.md | head -1)
+    if [[ "${README_PG_PIN}" = "${PGAGROAL_DOCKERFILE}" ]]; then
+        ok "F7: README.md Pinned Versions has pgagroal ${PGAGROAL_DOCKERFILE}"
+    else
+        warn "F7: README.md Pinned Versions pgagroal=${README_PG_PIN:-<missing>}, expected ${PGAGROAL_DOCKERFILE}"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
+# F8: DOCKER_HUB.md quickstart and verify snippets reference the project version
+if [[ -f DOCKER_HUB.md ]]; then
+    if grep -qF "elevarq/pgagroal:${PROJECT_VERSION}" DOCKER_HUB.md; then
+        ok "F8: DOCKER_HUB.md references elevarq/pgagroal:${PROJECT_VERSION}"
+    else
+        warn "F8: DOCKER_HUB.md does not reference elevarq/pgagroal:${PROJECT_VERSION}"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+
 echo ""
 
 if [[ "${ERRORS}" -gt 0 ]]; then

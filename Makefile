@@ -5,7 +5,7 @@ HELM_RELEASE := pgagroal
 HELM_CHART   := helm/pgagroal
 NAMESPACE    := pgagroal
 
-.PHONY: build run test test-backend-restart test-docker-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
+.PHONY: build run test test-backend-restart test-docker-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh test-release-checks clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
 
 # ---------------------------------------------------------------------------
 # Docker
@@ -120,3 +120,7 @@ release-check:
 ## test-refresh    : Run refresh script automated tests
 test-refresh:
 	bash test/refresh/test-refresh.sh
+
+## test-release-checks : Run prepare-release.sh Gate F automated tests
+test-release-checks:
+	bash test/release-checks/test-prepare-release.sh
