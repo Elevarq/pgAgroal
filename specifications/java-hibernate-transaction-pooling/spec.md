@@ -1,5 +1,7 @@
 # Specification: Java/Hibernate Transaction Pooling Compatibility Validation
 
+Status: ACTIVE
+
 ## Objective
 
 Determine, with evidence, whether each of three Java/Hibernate applications

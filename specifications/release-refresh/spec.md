@@ -1,5 +1,7 @@
 # Specification: pgagroal Upstream Version Refresh
 
+Status: ACTIVE
+
 ## Purpose
 
 Provide a repeatable, scriptable workflow for updating the bundled pgagroal
