@@ -300,7 +300,39 @@ and re-pushes `v1.1.0`
 - `DOCKER_HUB.md` does not contain references to the previous version
   (`1.0.1`) in those snippets
 
-## AC-30: Docker Hub overview synchronized post-release  `[postcondition]`
+## AC-30: F9 — README + DOCKER_HUB.md only reference current version  `[gate-F]`
+
+**Given**: `VERSION` is `1.1.0`; `README.md` and `DOCKER_HUB.md` contain
+`elevarq/pgagroal:1.1.0` references and no other version pins
+**When**: Gate F enforcement runs
+**Then**:
+- F9 passes (no stale references found)
+
+## AC-31: F9 — stale reference in README.md  `[gate-F] [failure]`
+
+**Given**: `VERSION` is `1.1.0`; `README.md` contains
+`elevarq/pgagroal:1.0.1` somewhere outside an explicitly-historical
+section (e.g. a Helm tag example or a cosign-verify snippet)
+**When**: Gate F enforcement runs
+**Then**:
+- Exit code non-zero
+- Error message cites F9
+- Error message names the stale version (`1.0.1`) and the file
+  (`README.md`)
+
+## AC-32: F9 — stale reference in DOCKER_HUB.md  `[gate-F] [failure]`
+
+**Given**: `VERSION` is `1.1.0`; `DOCKER_HUB.md` contains
+`elevarq/pgagroal:1.0.1` (e.g. a leftover row in the "Versioning and
+tags" table or an unstaffed example)
+**When**: Gate F enforcement runs
+**Then**:
+- Exit code non-zero
+- Error message cites F9
+- Error message names the stale version (`1.0.1`) and the file
+  (`DOCKER_HUB.md`)
+
+## AC-33: Docker Hub overview synchronized post-release  `[postcondition]`
 
 **Given**: a stable release `v1.1.0` has been published and merged to main
 **When**: `.github/workflows/dockerhub-description.yml` completes
@@ -329,7 +361,7 @@ every acceptance case references at least one spec element.
 | Gate C | AC-14, AC-15, AC-16 |
 | Gate D | AC-13, AC-18 |
 | Gate E | AC-19, AC-21, AC-22, AC-20 |
-| Gate F | AC-01..AC-04, AC-08..AC-12b, AC-28, AC-29 |
-| Postconditions Q1–Q9 | AC-19..AC-25, AC-30 |
+| Gate F | AC-01..AC-04, AC-08..AC-12b, AC-28..AC-32 |
+| Postconditions Q1–Q9 | AC-19..AC-25, AC-33 |
 | Failure: retraction | AC-27 |
 | Failure: idempotent push | AC-26 |

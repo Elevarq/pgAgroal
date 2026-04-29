@@ -169,8 +169,26 @@ release.
 | F6 | If `Class: security`: `### Security` subsection present in changelog |
 | F7 | `README.md` "Pinned versions" table reflects current pinned versions |
 | F8 | `DOCKER_HUB.md` quick-start and verification snippets reference the release version |
+| F9 | `README.md` and `DOCKER_HUB.md` contain no `elevarq/pgagroal:<X.Y.Z>` reference where `<X.Y.Z>` differs from the current `VERSION`; stale tags in user-facing examples are blocked |
 
-`make prepare-release` runs F1–F2 today. F3–F8 are added by this spec.
+`make prepare-release` runs F1–F2 today. F3–F9 are added by this spec.
+
+F9 specifically guards against the failure mode where post-release docs
+hygiene drifts: an old version tag remains in a copy-pasteable example
+because nothing checked for it. F8 ensures the *current* version
+*appears*; F9 ensures *no other* version *appears*. The two are
+complementary.
+
+The check applies only to `README.md` and `DOCKER_HUB.md` because
+those are the top-level user-facing surfaces. It does not apply to:
+
+- `CHANGELOG.md` (history is supposed to mention old versions)
+- `docs/operations/migrations/<version>.md` (rollback steps
+  legitimately reference older versions)
+- `specifications/` (versioned examples in spec narratives)
+- `test/release-checks/` (fixtures deliberately use stale values)
+- `docs/release/release-checklist.md`, `docs/release/monthly-refresh.md`
+  (illustrative narrative examples)
 
 ## Postconditions
 
@@ -236,6 +254,7 @@ clear human / automation handoff.
 | Phase 1 | `Class:` field missing or invalid in the dated changelog section | F4 fails |
 | Phase 1 | `Class: breaking-config` declared but migration doc missing | F5 fails |
 | Phase 1 | `Class: security` declared but `### Security` subsection missing | F6 fails |
+| Phase 1 | `README.md` or `DOCKER_HUB.md` contains a stale `elevarq/pgagroal:<old>` reference | F9 fails |
 | Phase 2 | Any of Gates A–F fail in CI | publish workflow exits non-zero; tag remains but no image is published; remediate by deleting the tag (`git push origin :v<X.Y.Z>`), fixing on a new branch, and re-tagging |
 | Phase 2 | CRITICAL CVE found by Trivy | STOP per parent CLAUDE.md severity rule |
 | Phase 2 | Any gitleaks finding | STOP — secret rotation required before retag |
