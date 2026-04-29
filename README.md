@@ -145,14 +145,14 @@ In production, pin a version tag rather than `latest`:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "1.0.1"
+  tag: "1.1.0"
   pullPolicy: IfNotPresent
 ```
 
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.0.1 \
+cosign verify elevarq/pgagroal:1.1.0 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```

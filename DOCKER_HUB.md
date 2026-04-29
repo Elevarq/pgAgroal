@@ -66,8 +66,8 @@ Tags follow the project version in [VERSION](https://github.com/Elevarq/pgAgroal
 
 | Tag | Meaning |
 |---|---|
-| `1.0.1` | Exact release — pin this in production |
-| `1.0` | Latest patch of the 1.0 line |
+| `1.1.0` | Exact release — pin this in production |
+| `1.1` | Latest patch of the 1.1 line |
 | `latest` | Most recent stable release — convenience only |
 
 Only CI publishes tags. `latest` is a multi-arch manifest updated on every release.

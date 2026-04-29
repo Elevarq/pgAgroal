@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Build image
-        run: docker build -t pgagroal:2.0.2 .
+        run: docker build -t pgagroal:2.1.0 .
 
       - name: Run integration test
         run: bash test/integration/container-start-test.sh
@@ -140,7 +140,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Build image
-        run: docker build -t pgagroal:2.0.2 .
+        run: docker build -t pgagroal:2.1.0 .
 
       - name: Run backend restart test
         run: bash test/resilience/backend-restart-test.sh

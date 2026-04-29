@@ -13,7 +13,7 @@
 # ---------------------------------------------------------------------------
 image:
   repository: "CHANGEME.dkr.ecr.eu-west-1.amazonaws.com/pgagroal"  # CHANGEME: ECR URI
-  tag: "2.0.2"
+  tag: "2.1.0"
   pullPolicy: IfNotPresent
 
 # ---------------------------------------------------------------------------
