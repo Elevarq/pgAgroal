@@ -12,7 +12,7 @@ Confirm Helm recorded the release:
 helm list -n pgagroal
 ```
 
-Expected: `STATUS = deployed`, chart version matches `0.1.0`, app version matches `2.0.2`.
+Expected: `STATUS = deployed`, chart version matches `1.1.0`, app version matches `2.1.0`.
 
 Check the deployed image:
 
@@ -20,7 +20,7 @@ Check the deployed image:
 kubectl -n pgagroal get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[0].image}{"\n"}{end}'
 ```
 
-Expected: every pod shows your ECR URI with tag `2.0.2`.
+Expected: every pod shows your ECR URI with tag `2.1.0`.
 
 ## 2. Pod readiness
 
@@ -107,7 +107,7 @@ Check every replica has a clean startup:
 kubectl -n pgagroal logs -l app.kubernetes.io/name=pgagroal --tail=30
 ```
 
-Expected: `pgagroal: 2.0.2 started on *:6432` with no `ERROR` or `FATAL` lines.
+Expected: `pgagroal: 2.1.0 started on *:6432` with no `ERROR` or `FATAL` lines.
 
 Search for errors:
 

@@ -24,8 +24,8 @@ What you expected to happen.
 
 ## Environment
 
-- pgagroal container version: (e.g. 2.0.2)
-- Project version: (e.g. 0.1.0)
+- pgagroal container version: (e.g. 2.1.0)
+- Project version: (e.g. 1.1.0)
 - Deployment method: Docker / Helm / docker-compose
 - Kubernetes version (if applicable):
 - Platform: (e.g. EKS, local Docker Desktop)

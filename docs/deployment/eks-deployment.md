@@ -27,8 +27,8 @@ REGISTRY="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com"
 aws ecr get-login-password --region ${REGION} \
   | docker login --username AWS --password-stdin ${REGISTRY}
 
-docker tag pgagroal:2.0.2 ${REGISTRY}/pgagroal:2.0.2
-docker push ${REGISTRY}/pgagroal:2.0.2
+docker tag pgagroal:2.1.0 ${REGISTRY}/pgagroal:2.1.0
+docker push ${REGISTRY}/pgagroal:2.1.0
 ```
 
 ## 2. Create the Credentials Secret

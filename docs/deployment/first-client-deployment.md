@@ -9,7 +9,7 @@ Before starting, confirm:
 - [ ] `kubectl` is configured and pointing at the target EKS cluster
 - [ ] `helm` v3 is installed locally
 - [ ] The pgagroal container image has been pushed to ECR (see [docs/eks-deployment.md](eks-deployment.md) steps 1-2)
-- [ ] You know the ECR image URI and tag (e.g. `123456789012.dkr.ecr.eu-west-1.amazonaws.com/pgagroal:2.0.2`)
+- [ ] You know the ECR image URI and tag (e.g. `123456789012.dkr.ecr.eu-west-1.amazonaws.com/pgagroal:2.1.0`)
 - [ ] You know the PostgreSQL/RDS endpoint and port
 - [ ] You have the PostgreSQL credentials (username + password)
 - [ ] EKS nodes can reach the RDS instance (Security Groups, VPC peering, etc.)
