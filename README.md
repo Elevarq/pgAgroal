@@ -2,6 +2,8 @@
 
 Production-grade Docker container and Helm chart for [pgagroal](https://github.com/pgagroal/pgagroal) -- a high-performance PostgreSQL connection pooler.
 
+From [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams.
+
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
 
 ## Contents
@@ -202,6 +204,16 @@ or [Kyverno](https://kyverno.io/).
 | Debian base | bookworm-20260316-slim |
 | PostgreSQL (compose) | 17.4-bookworm |
 | Helm chart | 1.1.0 |
+
+## Related
+
+- [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams
+- [Project page on elevarq.com](https://elevarq.com/products/pgagroal) —
+  documentation, examples, and support contracts
+- [Arq-Signals](https://github.com/Elevarq/Arq-Signals) — open-source
+  PostgreSQL telemetry collector
+- [Upstream pgagroal](https://agroal.github.io/pgagroal/) — the connection
+  pooler this container packages
 
 ## License
 
