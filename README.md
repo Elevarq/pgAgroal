@@ -83,6 +83,7 @@ make test-pooling          # pool behavior validation
 make test-startup-failure  # startup failure mode (CI)
 make test-invalid-creds    # credential error handling
 make test-all              # everything
+make security              # local security, Helm, SBOM, and vulnerability gate
 ```
 
 ## Configuration
