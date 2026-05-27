@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write   # create GitHub Release
   id-token: write   # OIDC token for Sigstore signing + provenance
+  packages: write   # push image to GHCR (ghcr.io/elevarq/pgagroal)
 
 jobs:
   # ── Gate A.1 + F — tag/VERSION consistency, changelog present ─────────
@@ -150,7 +151,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: elevarq/pgagroal
+          images: |
+            elevarq/pgagroal
+            ghcr.io/elevarq/pgagroal
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -167,6 +170,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
         id: build
@@ -224,7 +234,8 @@ jobs:
 
           ## Supply chain
 
-          - Image: \`elevarq/pgagroal:${VERSION}\`
+          - Image (Docker Hub): \`docker.io/elevarq/pgagroal:${VERSION}\`
+          - Image (GHCR): \`ghcr.io/elevarq/pgagroal:${VERSION}\`
           - Digest: \`${DIGEST}\`
           - Architectures: linux/amd64, linux/arm64
           - Signed with [cosign](https://github.com/sigstore/cosign) (keyless, GitHub OIDC)
