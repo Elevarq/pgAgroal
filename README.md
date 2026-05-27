@@ -4,7 +4,8 @@ Production-grade Docker container and Helm chart for [pgagroal](https://github.c
 
 From [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams.
 
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+[![CI](https://github.com/Elevarq/pgAgroal/actions/workflows/container-ci.yml/badge.svg)](https://github.com/Elevarq/pgAgroal/actions/workflows/container-ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
 
 ## Contents
 
