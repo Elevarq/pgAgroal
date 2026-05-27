@@ -1,0 +1,69 @@
+name: Feature or task
+description: Suggest an improvement or a unit of planned work.
+title: "feat: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem does this solve? Why is the current behaviour insufficient?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The change you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Effort (T-shirt size)
+      options:
+        - "XS"
+        - "S"
+        - "M"
+        - "L"
+        - "XL"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "P0 — Must-have"
+        - "P1 — Should-have"
+        - "P2 — Nice-to-have"
+        - "P3 — Backlog"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        After creating this issue, apply the matching labels:
+        `effort:XS`/`effort:S`/`effort:M`/`effort:L`/`effort:XL` and
+        `priority:P0`/`priority:P1`/`priority:P2`/`priority:P3`.

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Elevarq/pgAgroal/blob/main/SECURITY.md
+    about: Do not file public issues for vulnerabilities. Email security@elevarq.com.
+  - name: Upstream pgagroal
+    url: https://github.com/pgagroal/pgagroal
+    about: Bugs/features in the pooler itself belong upstream, not in this packaging repo.
