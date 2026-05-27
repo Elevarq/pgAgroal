@@ -6,14 +6,15 @@ If you discover a security vulnerability in this project, please report it respo
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, email the maintainers directly. Include:
+Instead, email `security@elevarq.com`. Include:
 
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
 - Suggested fix (if any)
 
-We will acknowledge receipt within 48 hours and aim to provide a fix within 7 days for critical issues.
+We will acknowledge receipt within 48 hours and provide a fix timeline
+within 5 business days.
 
 ## Scope
 
