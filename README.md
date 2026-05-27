@@ -39,6 +39,30 @@ make stop
 
 ### Kubernetes / Helm
 
+Each release publishes the chart as an OCI artifact to GHCR, so you can
+install by reference without a repo checkout (the chart version matches
+the release version):
+
+```bash
+helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal \
+  --version 1.2.0 \
+  --set postgresql.host=my-postgres \
+  --set credentials.username=app \
+  --set credentials.password=secret \
+  -n pgagroal --create-namespace
+```
+
+The published chart is cosign-signed (keyless, GitHub OIDC) -- the same
+trust root as the container image. Verify before install:
+
+```bash
+cosign verify ghcr.io/elevarq/charts/pgagroal:1.2.0 \
+  --certificate-identity-regexp='https://github.com/Elevarq/' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+```
+
+Or install from a working-tree checkout:
+
 ```bash
 make build
 helm install pgagroal helm/pgagroal/ \

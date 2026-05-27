@@ -72,6 +72,16 @@ Tags follow the project version in [VERSION](https://github.com/Elevarq/pgAgroal
 
 Only CI publishes tags. `latest` is a multi-arch manifest updated on every release.
 
+## Helm chart
+
+The Helm chart is published as an OCI artifact to GHCR alongside each release, so it installs by reference (the chart version matches the image tag):
+
+```bash
+helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal --version 1.2.0
+```
+
+The chart is cosign-signed with the same keyless GitHub OIDC identity as the image.
+
 ## Documentation
 
 - Product documentation: [elevarq.com/docs/pgagroal-container](https://elevarq.com/docs/pgagroal-container)
