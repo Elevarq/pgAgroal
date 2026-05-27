@@ -241,13 +241,21 @@ jobs:
           - Signed with [cosign](https://github.com/sigstore/cosign) (keyless, GitHub OIDC)
           - SBOM and SLSA provenance attached as OCI attestations
 
-          Verify signature:
+          Verify signature and attestations:
 
           \`\`\`bash
-          cosign verify elevarq/pgagroal:${VERSION} \\
-            --certificate-identity-regexp='github.com/Elevarq/' \\
+          IMAGE=docker.io/elevarq/pgagroal:${VERSION}   # or ghcr.io/elevarq/pgagroal:${VERSION}
+
+          cosign verify "\$IMAGE" \\
+            --certificate-identity-regexp='https://github.com/Elevarq/' \\
             --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+
+          cosign verify-attestation --type spdxjson      "\$IMAGE"   # SBOM
+          cosign verify-attestation --type slsaprovenance "\$IMAGE"   # provenance
           \`\`\`
+
+          Full verification guide:
+          https://github.com/Elevarq/pgAgroal/blob/main/docs/security/supply-chain-and-release-security.md
           EOF
 
       - name: Create GitHub release
