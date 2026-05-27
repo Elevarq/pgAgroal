@@ -30,6 +30,12 @@ Class: feature
 - Release tooling: new Gate F9 blocks stale image references in user
   docs; added a local container security gate.
 
+### Security
+
+- Apply Debian security updates in the runtime image so CVE fixes from
+  bookworm-security (e.g. libgnutls30 `deb12u7`, libcap2 `deb12u3`) are
+  included — the pinned base-image snapshot does not bake these in.
+
 ### CI
 
 - Bump `azure/setup-helm` 4 → 5 and `aquasecurity/trivy-action`
