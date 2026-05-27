@@ -1,8 +1,8 @@
 # Default owners for the entire repository
-* @Elevarq/infrastructure
+* @fheikens
 
 # Helm chart
-helm/ @Elevarq/infrastructure
+helm/ @fheikens
 
 # CI pipeline
-.github/ @Elevarq/infrastructure
+.github/ @fheikens
