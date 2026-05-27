@@ -69,12 +69,15 @@ glance and gives Gate F a single deterministic field to validate.
 On success a project release produces:
 
 1. A signed git tag `v<X.Y.Z>` on `main` of `Elevarq/pgAgroal`.
-2. A multi-arch container image at `elevarq/pgagroal:<X.Y.Z>` covering
-   `linux/amd64` and `linux/arm64`.
-3. Image tags on Docker Hub (per `docs/release/release-checklist.md`):
+2. A multi-arch container image covering `linux/amd64` and `linux/arm64`,
+   published to **both** registries from a single build:
+   - Docker Hub: `docker.io/elevarq/pgagroal:<X.Y.Z>` (reach)
+   - GHCR: `ghcr.io/elevarq/pgagroal:<X.Y.Z>` (GitHub-native discoverability)
+3. The same tag set on both registries (per `docs/release/release-checklist.md`):
    - Stable: `<X.Y.Z>`, `<X.Y>`, `latest`
    - RC: `<X.Y.Z>-rc<N>` only — must not update `<X.Y>` or `latest`
-4. A cosign keyless signature on the published image (GitHub OIDC issuer).
+4. A cosign keyless signature on every published tag (GitHub OIDC issuer),
+   across both registries.
 5. An SBOM attestation (SPDX-JSON) attached to the image.
 6. A SLSA provenance attestation (`mode=max`) attached to the image.
 7. A GitHub Release object for the tag, with body sourced from the
