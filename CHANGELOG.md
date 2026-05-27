@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-27
+
+Class: feature
+
+### Added
+
+- GHCR distribution: the multi-arch image is now published to
+  `ghcr.io/elevarq/pgagroal` alongside Docker Hub, from the same build,
+  with cosign keyless signatures, SBOM, and SLSA provenance on both
+  registries.
+- Release notes now document full verification — the cosign signature
+  plus SBOM and SLSA-provenance `verify-attestation` commands — and link
+  the supply-chain verification guide.
+- Community-health files: `CODE_OF_CONDUCT.md` and `GOVERNANCE.md`.
+
+### Changed
+
+- `SECURITY.md` names `security@elevarq.com` as the disclosure channel.
+- `CODEOWNERS` now references a valid owner (previously a non-existent
+  team, so review routing was inert).
+- README gains a CI status badge; issue templates migrated to structured
+  YAML forms.
+- Release tooling: new Gate F9 blocks stale image references in user
+  docs; added a local container security gate.
+
+### CI
+
+- Bump `azure/setup-helm` 4 → 5 and `aquasecurity/trivy-action`
+  0.35.0 → 0.36.0.
+
+No change to the bundled pgagroal version (2.1.0).
+
 ## [1.1.0] - 2026-04-29
 
 Class: breaking-config
