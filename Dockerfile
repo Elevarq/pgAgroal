@@ -56,7 +56,13 @@ LABEL maintainer="elevarq" \
       org.opencontainers.image.source="https://github.com/pgagroal/pgagroal" \
       org.opencontainers.image.version="${PGAGROAL_VERSION}"
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Pull Debian security updates on top of the pinned base. Debian publishes
+# CVE fixes (e.g. libgnutls30 deb12u7, libcap2 deb12u3) to bookworm-security,
+# which the dated base-image snapshots do not bake in — so a security
+# upgrade is required to ship a CVE-clean runtime. DL3005 is intentionally
+# ignored here for exactly that reason.
+# hadolint ignore=DL3005
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
         libssl3 \
         zlib1g \
         libbz2-1.0 \
