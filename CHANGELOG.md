@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Integration stack: `docker-compose.yml` now composes pgagroal +
+  pgexporter against a PostgreSQL backend, demonstrating two independent
+  observability paths — pgexporter for server metrics (direct to the
+  backend, never through the pooler) and pgagroal's native endpoint for
+  pooler metrics. pgexporter is built from pinned upstream source and
+  authenticates with a least-privilege `pg_monitor` role. Adds a
+  behavioral specification, acceptance cases, and
+  integration/validation/resilience tests wired into CI. (#42)
 - Release workflow now publishes the Helm chart as an OCI artifact to
   `oci://ghcr.io/elevarq/charts/pgagroal`, cosign-signed with the same
   keyless GitHub OIDC identity as the container image. The chart version

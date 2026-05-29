@@ -7,6 +7,8 @@ services:
       POSTGRES_DB: testdb
     volumes:
       - pg_data:/var/lib/postgresql/data
+      # Creates the least-privilege pgexporter monitoring role (pg_monitor).
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
       interval: 5s
@@ -15,6 +17,8 @@ services:
     networks:
       - pgagroal-net
 
+  # Connection pooling layer — the client data path.
+  # Also exposes its own native Prometheus metrics endpoint (pooler metrics).
   pgagroal:
     build:
       context: .
@@ -27,10 +31,34 @@ services:
       PG_BACKEND_PORT: "5432"
       PGAGROAL_HOST: "*"
       PGAGROAL_PORT: "6432"
+      PGAGROAL_METRICS_PORT: "2346"
       MAX_CONNECTIONS: "100"
       PGAGROAL_LOG_LEVEL: info
     ports:
-      - "6432:6432"
+      - "6432:6432"   # pooler (client data path)
+      - "2346:2346"   # pgagroal native metrics (pooler metrics)
+    networks:
+      - pgagroal-net
+
+  # PostgreSQL metrics exporter — the server-metrics path.
+  # Connects DIRECTLY to postgres (never through pgagroal) so the pooler's
+  # statistics are not polluted by the exporter's own scrape connections.
+  pgexporter:
+    build:
+      context: ./pgexporter
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_BACKEND_HOST: postgres
+      PG_BACKEND_PORT: "5432"
+      PGEXPORTER_USER: pgexporter
+      PGEXPORTER_PASSWORD: pgexporter
+      PGEXPORTER_METRICS_PORT: "5002"
+      PGEXPORTER_LOG_LEVEL: info
+    ports:
+      - "5002:5002"   # pgexporter metrics (server metrics)
     networks:
       - pgagroal-net
 

@@ -22,11 +22,17 @@ jobs:
           dockerfile: Dockerfile
           failure-threshold: error
 
+      - name: Lint pgexporter Dockerfile with hadolint
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          dockerfile: pgexporter/Dockerfile
+          failure-threshold: error
+
       - name: ShellCheck entrypoint.sh
         uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: .
-          additional_files: entrypoint.sh
+          additional_files: entrypoint.sh pgexporter/entrypoint.sh
 
   helm-lint:
     name: Helm Lint
@@ -157,3 +163,20 @@ jobs:
 
       - name: Run startup failure test
         run: bash test/resilience/startup-failure-test.sh
+
+  integration-stack-test:
+    name: pgagroal + pgexporter Integration Stack
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      # These tests build the stack via `docker compose up --build`.
+      - name: Integration (AC-01, AC-02, AC-03, AC-06)
+        run: bash test/integration/compose-integration-test.sh
+
+      - name: Unreachable backend surfaced (AC-04)
+        run: bash test/validation/pgexporter-unreachable-backend-test.sh
+
+      - name: Backend-loss resilience (AC-05)
+        run: bash test/resilience/pgexporter-backend-loss-test.sh
