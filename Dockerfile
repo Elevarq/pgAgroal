@@ -95,13 +95,14 @@ COPY entrypoint.sh             /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && chown -R pgagroal:pgagroal /etc/pgagroal
 
-EXPOSE 6432
+EXPOSE 6432 2346
 
 USER pgagroal
 WORKDIR /home/pgagroal
 
 ENV PGAGROAL_HOST="*" \
     PGAGROAL_PORT="6432" \
+    PGAGROAL_METRICS_PORT="2346" \
     PG_BACKEND_HOST="postgres" \
     PG_BACKEND_PORT="5432" \
     POOL_SIZE="100" \

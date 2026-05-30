@@ -37,6 +37,42 @@ psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
 make stop
 ```
 
+### Integration stack (pgagroal + pgexporter)
+
+`docker-compose.yml` composes a production-like stack: a PostgreSQL
+backend, pgagroal pooling in front of it, and
+[pgexporter](https://github.com/pgexporter/pgexporter) exporting
+PostgreSQL metrics. It is an integration *example* — the focused
+single-component containers live upstream; this repository wires them
+together with hardened defaults.
+
+```bash
+docker compose up -d --build
+# Pooled client traffic (data path):
+psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
+# PostgreSQL server metrics (pgexporter, direct to the backend):
+curl -s http://localhost:5002/metrics | grep '^pgexporter_pg_' | head
+# Pooler metrics (pgagroal native endpoint):
+curl -s http://localhost:2346/metrics | grep '^pgagroal_' | head
+docker compose down -v
+```
+
+The stack separates the data path from observability, and uses one
+metrics source per layer:
+
+| Path | Component | Endpoint | Connects |
+|------|-----------|----------|----------|
+| Client data | pgagroal | `:6432` | → postgres |
+| Pooler metrics | pgagroal native | `:2346/metrics` | (self) |
+| Server metrics | pgexporter | `:5002/metrics` | → postgres **directly** |
+
+pgexporter connects **directly to PostgreSQL**, never through pgagroal,
+so the pooler's statistics are not polluted by scrape traffic, and it
+authenticates with a least-privilege `pg_monitor` role (created by
+`postgres-init/01-pgexporter-role.sql`). See
+`specifications/compose-pgexporter-integration/` for the full
+specification.
+
 ### Kubernetes / Helm
 
 Each release publishes the chart as an OCI artifact to GHCR, so you can

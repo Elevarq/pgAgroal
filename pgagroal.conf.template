@@ -1,6 +1,7 @@
 [pgagroal]
 host = ${PGAGROAL_HOST}
 port = ${PGAGROAL_PORT}
+metrics = ${PGAGROAL_METRICS_PORT}
 unix_socket_dir = /tmp/
 
 log_type = console
