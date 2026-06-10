@@ -15,3 +15,21 @@ Port-forward for local access:
 
 Prometheus metrics available on port {{ .Values.metrics.port }}.
 {{- end }}
+{{- if .Values.networkPolicy.enabled }}
+
+NetworkPolicy is enabled.
+{{- if not (or .Values.networkPolicy.ingressPodSelectors .Values.networkPolicy.ingressNamespaceSelectors) }}
+  WARNING: no networkPolicy.ingressPodSelectors / ingressNamespaceSelectors
+  are set, so NO pod can reach the pooler. Add the client app's labels.
+{{- end }}
+{{- if not .Values.networkPolicy.egress.backendCIDRs }}
+  WARNING: networkPolicy.egress.backendCIDRs is empty, so the pooler has no
+  egress rule to the backend and cannot reach Postgres. Set the backend
+  CIDR(s) (e.g. an RDS /32 or the in-cluster pod-network CIDR).
+{{- end }}
+{{- else }}
+
+NetworkPolicy is NOT enabled — any in-cluster pod can reach the pooler.
+Set networkPolicy.enabled=true (with ingress selectors + backend CIDRs) to
+restrict access. Recommended for production.
+{{- end }}

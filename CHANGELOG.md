@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Helm chart: optional `NetworkPolicy` (`networkPolicy.enabled`, off by
+  default). When enabled it restricts ingress to operator-listed client
+  pods/namespaces on the pooler (and metrics) port, and egress to just the
+  configured backend Postgres CIDR(s) and DNS — limiting the blast radius
+  of a pooler fronting Postgres. Install NOTES warn when enabled with empty
+  ingress selectors or backend CIDRs. README documents the values. (#49)
+
 ### Added
 
 - Integration stack: `docker-compose.yml` now composes pgagroal +

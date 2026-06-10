@@ -108,6 +108,34 @@ helm install pgagroal helm/pgagroal/ \
   -n pgagroal --create-namespace
 ```
 
+#### NetworkPolicy (recommended for production)
+
+The pooler fronts your database and is a high-value lateral-movement
+target. The chart ships an opt-in `NetworkPolicy` that restricts ingress
+to the client pods that actually need the pooler and egress to just the
+backend Postgres and DNS. It is **off by default** (not every CNI enforces
+NetworkPolicy, so an always-on manifest would be a silent no-op) — enable
+it explicitly:
+
+```bash
+helm upgrade pgagroal helm/pgagroal/ \
+  --set networkPolicy.enabled=true \
+  --set 'networkPolicy.ingressPodSelectors[0].app\.kubernetes\.io/name=my-app' \
+  --set 'networkPolicy.egress.backendCIDRs[0]=10.0.5.10/32'
+```
+
+| Value | Purpose |
+|---|---|
+| `networkPolicy.enabled` | Render the policy. Recommended `true` in production. |
+| `networkPolicy.ingressPodSelectors` | Label maps of pods allowed to reach the pooler. **Empty = no ingress** (conservative default). |
+| `networkPolicy.ingressNamespaceSelectors` | Label maps of namespaces allowed, in addition to pods. |
+| `networkPolicy.egress.backendCIDRs` | Backend Postgres CIDR(s) (e.g. an RDS `/32`, or the in-cluster pod-network CIDR). Required for a working policy. |
+| `networkPolicy.egress.kubeDNS` | Kube-DNS resolver CIDR(s). |
+
+If you enable the policy with empty ingress selectors or backend CIDRs the
+install NOTES warn you, since the pooler would otherwise be unreachable or
+unable to reach Postgres.
+
 ## Deployment
 
 | Guide | Description |

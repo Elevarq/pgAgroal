@@ -1,0 +1,80 @@
+{{- /*
+  #49 — NetworkPolicy for the pgagroal pod.
+
+  A connection pooler fronting Postgres is a high-value lateral-movement
+  target. With strong pod/container securityContext but no NetworkPolicy,
+  any in-cluster pod can reach the pooler. This policy restricts:
+
+  - Ingress: only the operator-listed client pods (and/or namespaces) may
+    reach the pooler port (and the metrics port when enabled).
+  - Egress: only the configured backend Postgres CIDR(s) + DNS.
+
+  Opt-in via `networkPolicy.enabled`. Default OFF because not every cluster
+  runs a CNI that enforces NetworkPolicy — in which case the manifest is a
+  silent no-op rather than a security gain. Opt-in surfaces the decision.
+*/}}
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pgagroal.fullname" . }}
+  labels:
+    {{- include "pgagroal.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "pgagroal.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if or .Values.networkPolicy.ingressPodSelectors .Values.networkPolicy.ingressNamespaceSelectors }}
+    - from:
+        {{- range .Values.networkPolicy.ingressPodSelectors }}
+        - podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+        {{- range .Values.networkPolicy.ingressNamespaceSelectors }}
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.pgagroal.port }}
+        {{- if .Values.metrics.enabled }}
+        - protocol: TCP
+          port: {{ .Values.metrics.port }}
+        {{- end }}
+    {{- else }}
+    # No ingress allowed. Operators MUST set
+    # networkPolicy.ingressPodSelectors (the client app's labels) to admit
+    # traffic. Falling through to no-ingress is the conservative default.
+    {{- end }}
+  egress:
+    {{- with .Values.networkPolicy.egress.backendCIDRs }}
+    # Backend Postgres
+    - to:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.postgresql.port }}
+    {{- end }}
+    {{- with .Values.networkPolicy.egress.kubeDNS }}
+    # DNS
+    - to:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+{{- end }}

@@ -72,6 +72,37 @@ service:
   port: 6432
 
 # ---------------------------------------------------------------------------
+# NetworkPolicy (#49). Opt-in. A pooler fronting Postgres is a high-value
+# lateral-movement target; restricting ingress to the pods that actually
+# need the pooler — and egress to just the backend + DNS — limits blast
+# radius. Recommended ON for production.
+#
+# Default OFF because not every cluster runs a CNI that enforces
+# NetworkPolicy (the manifest is then a silent no-op); opt-in surfaces the
+# decision to the operator.
+# ---------------------------------------------------------------------------
+networkPolicy:
+  # -- Render the NetworkPolicy (recommended: true in production)
+  enabled: false
+  # -- Pods allowed to reach the pooler (and metrics) port. Each entry is a
+  # label map. Empty => NO ingress is allowed (conservative default) — list
+  # the client app's labels, e.g.:
+  #   - app.kubernetes.io/name: my-app
+  ingressPodSelectors: []
+  # -- Namespaces allowed to reach the pooler, in addition to pods. Each
+  # entry is a label map matched against namespace labels.
+  ingressNamespaceSelectors: []
+  egress:
+    # -- Backend Postgres CIDR(s) the pooler must reach (e.g. an RDS /32, or
+    # the pod-network CIDR for an in-cluster Postgres). Required for a
+    # working policy: if empty, the backend egress rule is omitted and the
+    # pooler cannot reach Postgres.
+    backendCIDRs: []
+    # -- Kube-DNS resolver CIDR(s). Override per cluster.
+    kubeDNS:
+      - "10.96.0.10/32"
+
+# ---------------------------------------------------------------------------
 # Probes
 # ---------------------------------------------------------------------------
 livenessProbe:
