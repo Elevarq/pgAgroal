@@ -10,7 +10,7 @@ log_level = ${PGAGROAL_LOG_LEVEL}
 max_connections = ${MAX_CONNECTIONS}
 idle_timeout = 600
 validation = off
-allow_unknown_users = true
+allow_unknown_users = ${PGAGROAL_ALLOW_UNKNOWN_USERS}
 
 pipeline = auto
 ev_backend = epoll

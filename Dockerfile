@@ -107,7 +107,9 @@ ENV PGAGROAL_HOST="*" \
     PG_BACKEND_PORT="5432" \
     POOL_SIZE="100" \
     MAX_CONNECTIONS="100" \
-    PGAGROAL_LOG_LEVEL="info"
+    PGAGROAL_LOG_LEVEL="info" \
+    PGAGROAL_HBA_SOURCE="10.0.0.0/8,172.16.0.0/16,172.17.0.0/16,172.18.0.0/16,172.19.0.0/16,172.20.0.0/16,172.21.0.0/16,172.22.0.0/16,172.23.0.0/16,172.24.0.0/16,172.25.0.0/16,172.26.0.0/16,172.27.0.0/16,172.28.0.0/16,172.29.0.0/16,172.30.0.0/16,172.31.0.0/16,192.168.0.0/16" \
+    PGAGROAL_ALLOW_UNKNOWN_USERS="true"
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
     CMD pgagroal-cli -c /etc/pgagroal/pgagroal.conf ping || exit 1

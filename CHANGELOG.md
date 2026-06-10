@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- HBA source-address restriction: the pooler's `pgagroal_hba.conf` is now
+  generated from `PGAGROAL_HBA_SOURCE` (`pgagroal.hbaSource`), a
+  comma-separated CIDR allowlist defaulting to the RFC1918 private ranges
+  instead of `host all all all all`. An accidentally-exposed pooler now
+  rejects public-internet sources at the HBA layer (defence in depth — the
+  backend remains the auth authority). pgagroal matches HBA CIDRs on octet
+  boundaries only (no `/12`), so `172.16.0.0/12` is expressed as its sixteen
+  `/16` blocks. Set `PGAGROAL_HBA_SOURCE=all` for the legacy any-source
+  behaviour, or to your CIDR if the pod network is outside RFC1918. `allow_unknown_users` is likewise now
+  configurable via `PGAGROAL_ALLOW_UNKNOWN_USERS` (default `true`).
+  The `docker-compose.yml` example publishes the pooler on the loopback
+  interface only. Spec + acceptance + a dockerless validation test under
+  `specifications/hba-source-restriction/` (wired into CI). (#48)
+
 ### Added
 
 - Integration stack: `docker-compose.yml` now composes pgagroal +

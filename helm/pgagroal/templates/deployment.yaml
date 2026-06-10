@@ -77,6 +77,10 @@ spec:
               value: {{ .Values.pgagroal.maxConnections | quote }}
             - name: PGAGROAL_LOG_LEVEL
               value: {{ .Values.pgagroal.logLevel | quote }}
+            - name: PGAGROAL_HBA_SOURCE
+              value: {{ .Values.pgagroal.hbaSource | quote }}
+            - name: PGAGROAL_ALLOW_UNKNOWN_USERS
+              value: {{ .Values.pgagroal.allowUnknownUsers | quote }}
             {{- if or .Values.credentials.create .Values.credentials.existingSecret }}
             - name: PG_USERNAME
               valueFrom:

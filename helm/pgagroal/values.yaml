@@ -41,6 +41,20 @@ pgagroal:
   maxConnections: 100
   # -- Log level: fatal, error, warn, info, debug1-debug5, trace
   logLevel: info
+  # -- HBA source-address allowlist (comma-separated CIDRs). Restricts which
+  # source addresses the pooler accepts at the HBA layer. Default = RFC1918
+  # private ranges, so an accidentally-exposed pooler rejects public sources.
+  # pgagroal matches CIDRs on octet boundaries only (/8, /16, /24 — NOT /12),
+  # so 172.16.0.0/12 is expanded into its sixteen /16 blocks. Set to "all" to
+  # accept any source (legacy), or tighten to your client pod-network CIDR.
+  # If your pod network is outside RFC1918 (e.g. EKS 100.64.0.0/10 secondary
+  # CIDR), set this to that CIDR. Pair `host: "*"` with a NetworkPolicy.
+  hbaSource: "10.0.0.0/8,172.16.0.0/16,172.17.0.0/16,172.18.0.0/16,172.19.0.0/16,172.20.0.0/16,172.21.0.0/16,172.22.0.0/16,172.23.0.0/16,172.24.0.0/16,172.25.0.0/16,172.26.0.0/16,172.27.0.0/16,172.28.0.0/16,172.29.0.0/16,172.30.0.0/16,172.31.0.0/16,192.168.0.0/16"
+  # -- Pass unknown users through to the backend for authentication
+  # (transparent pooling — the backend is the auth gate). Set false to require
+  # every user be pre-registered with pgagroal (frontend auth); only do this
+  # if you register users, otherwise all connections are rejected.
+  allowUnknownUsers: true
 
 # ---------------------------------------------------------------------------
 # PostgreSQL backend

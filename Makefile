@@ -48,8 +48,12 @@ test-startup-failure:
 test-invalid-creds:
 	bash test/validation/invalid-credentials-test.sh
 
+## test-hba  : Test HBA source-address restriction (dockerless)
+test-hba:
+	bash test/validation/hba-source-test.sh
+
 ## test-validation : Run validation tests
-test-validation: test-pooling test-startup-failure test-invalid-creds
+test-validation: test-pooling test-startup-failure test-invalid-creds test-hba
 
 ## test-all  : Run every test sequentially
 test-all: test test-backend-restart test-docker-restart test-concurrent test-validation

@@ -34,9 +34,13 @@ services:
       PGAGROAL_METRICS_PORT: "2346"
       MAX_CONNECTIONS: "100"
       PGAGROAL_LOG_LEVEL: info
+    # Published to the loopback interface only — the pooler is not exposed on
+    # every host interface by default. The in-stack test-client reaches it
+    # over the compose network by name, so tests are unaffected. To reach it
+    # from another host, change the bind to "0.0.0.0:6432:6432" deliberately.
     ports:
-      - "6432:6432"   # pooler (client data path)
-      - "2346:2346"   # pgagroal native metrics (pooler metrics)
+      - "127.0.0.1:6432:6432"   # pooler (client data path)
+      - "127.0.0.1:2346:2346"   # pgagroal native metrics (pooler metrics)
     networks:
       - pgagroal-net
 
@@ -58,7 +62,7 @@ services:
       PGEXPORTER_METRICS_PORT: "5002"
       PGEXPORTER_LOG_LEVEL: info
     ports:
-      - "5002:5002"   # pgexporter metrics (server metrics)
+      - "127.0.0.1:5002:5002"   # pgexporter metrics (server metrics, loopback only)
     networks:
       - pgagroal-net
 

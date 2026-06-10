@@ -157,6 +157,33 @@ make security              # local security, Helm, SBOM, and vulnerability gate
 | `PG_BACKEND_PORT` / `postgresql.port` | `5432` | PostgreSQL port |
 | `MAX_CONNECTIONS` / `pgagroal.maxConnections` | `100` | Maximum pool connections |
 | `PGAGROAL_LOG_LEVEL` / `pgagroal.logLevel` | `info` | Log level |
+| `PGAGROAL_HBA_SOURCE` / `pgagroal.hbaSource` | RFC1918 (octet-aligned) | Comma-separated CIDR allowlist of accepted **source** addresses. Default = RFC1918 private ranges, so an accidentally-exposed pooler rejects public sources. Set to `all` for any source (legacy), or tighten to your client CIDR. |
+| `PGAGROAL_ALLOW_UNKNOWN_USERS` / `pgagroal.allowUnknownUsers` | `true` | Pass unknown users through to the backend for auth (transparent pooling). Set `false` only if you pre-register every user with pgagroal. |
+
+### Source-address restriction (HBA)
+
+The pooler binds `*` (all interfaces) inside the container, but its
+generated `pgagroal_hba.conf` only accepts the source CIDRs listed in
+`PGAGROAL_HBA_SOURCE`. The default restricts to the RFC1918 private ranges
+— the realistic networks for a Docker bridge, a Kubernetes pod network, or
+an on-prem subnet — so a pooler accidentally published on a public
+interface rejects public-internet sources at the HBA layer. This is
+defence in depth: the backend PostgreSQL still authenticates every user.
+
+> pgagroal matches HBA CIDRs on **octet boundaries only** (`/8`, `/16`,
+> `/24` — not `/12`), so the default expresses `172.16.0.0/12` as its
+> sixteen `/16` blocks. If your pod network is outside RFC1918 (e.g. an
+> EKS cluster using the `100.64.0.0/10` secondary CIDR), set
+> `PGAGROAL_HBA_SOURCE` to that CIDR, or to `all` and rely on the
+> NetworkPolicy.
+
+In Kubernetes, pair `pgagroal.host: "*"` with the chart's
+[`NetworkPolicy`](#networkpolicy-recommended-for-production). The
+`docker-compose.yml` example publishes the pooler on the **loopback
+interface only** (`127.0.0.1:6432`); change the bind deliberately if you
+need to reach it from another host.
+
+Spec: `specifications/hba-source-restriction/`.
 
 ## Upstream Refresh
 
