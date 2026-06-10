@@ -4,12 +4,16 @@
 # https://github.com/pgagroal/pgagroal
 
 ARG DEBIAN_VERSION=bookworm-20260316-slim
+# Pin the base by its multi-arch index digest for reproducibility (Gate D).
+# The human-readable tag above is retained for clarity; the digest is
+# authoritative. Keep both in sync — Dependabot/Renovate update them together.
+ARG DEBIAN_DIGEST=sha256:f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a
 ARG PGAGROAL_VERSION=2.1.0
 
 # =============================================================================
 # Stage 1: Build pgagroal from source
 # =============================================================================
-FROM debian:${DEBIAN_VERSION} AS builder
+FROM debian:${DEBIAN_VERSION}@${DEBIAN_DIGEST} AS builder
 
 ARG PGAGROAL_VERSION
 
@@ -46,7 +50,7 @@ RUN cmake \
 # =============================================================================
 # Stage 2: Minimal runtime image
 # =============================================================================
-FROM debian:${DEBIAN_VERSION}
+FROM debian:${DEBIAN_VERSION}@${DEBIAN_DIGEST}
 
 ARG PGAGROAL_VERSION
 

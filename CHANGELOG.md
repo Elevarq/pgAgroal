@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Pin the Debian base image by its multi-arch index digest
+  (`debian:bookworm-20260316-slim@sha256:f065…ab020a`) in both build
+  stages, instead of relying on the mutable dated tag alone. Matches
+  the digest-pinning posture of the arq/workbench images and satisfies
+  Release Protocol Gate D (supply chain). (#50)
+
 ### Added
 
 - Integration stack: `docker-compose.yml` now composes pgagroal +
