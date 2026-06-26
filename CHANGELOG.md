@@ -22,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keyless GitHub OIDC identity as the container image. The chart version
   is stamped from the release tag at package time. (#40)
 
+### Fixed
+
+- **Helm chart default image now resolves to a published image (#56).**
+  `image.repository` defaulted to `pgagroal` (no registry) and `image.tag`
+  to `2.1.0` (the appVersion), but the published image is
+  `ghcr.io/elevarq/pgagroal:<chart-version>`. The defaults are now
+  `repository: ghcr.io/elevarq/pgagroal` and an empty `tag` that falls
+  through to the chart version, so a default `helm install` pulls a real
+  image. (The chart itself was also missing from ghcr because the
+  `publish-chart` job postdated v1.2.0 — fixed by re-cutting a release with
+  the job present.)
+
 ## [1.2.0] - 2026-05-27
 
 Class: feature
