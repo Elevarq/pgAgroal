@@ -15,13 +15,13 @@ Production-grade container image for [pgagroal](https://github.com/pgagroal/pgag
 ## Quick start
 
 ```bash
-docker pull elevarq/pgagroal:1.2.0
+docker pull elevarq/pgagroal:1.3.0
 
 docker run -d --name pgagroal \
   -p 6432:6432 \
   -e PG_BACKEND_HOST=your-postgres-host \
   -e PG_BACKEND_PORT=5432 \
-  elevarq/pgagroal:1.2.0
+  elevarq/pgagroal:1.3.0
 
 psql -h localhost -p 6432 -U youruser -d yourdb -c 'SELECT 1;'
 ```
@@ -29,7 +29,7 @@ psql -h localhost -p 6432 -U youruser -d yourdb -c 'SELECT 1;'
 ## Verify
 
 ```bash
-cosign verify elevarq/pgagroal:1.2.0 \
+cosign verify elevarq/pgagroal:1.3.0 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -66,7 +66,7 @@ Tags follow the project version in [VERSION](https://github.com/Elevarq/pgAgroal
 
 | Tag | Meaning |
 |---|---|
-| `1.2.0` | Exact release — pin this in production |
+| `1.3.0` | Exact release — pin this in production |
 | `1.1` | Latest patch of the 1.1 line |
 | `latest` | Most recent stable release — convenience only |
 
@@ -77,7 +77,7 @@ Only CI publishes tags. `latest` is a multi-arch manifest updated on every relea
 The Helm chart is published as an OCI artifact to GHCR alongside each release, so it installs by reference (the chart version matches the image tag):
 
 ```bash
-helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal --version 1.2.0
+helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal --version 1.3.0
 ```
 
 The chart is cosign-signed with the same keyless GitHub OIDC identity as the image.
