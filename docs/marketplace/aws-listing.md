@@ -62,6 +62,26 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
 - Catalog-API change-set: [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json)
   (concrete URIs, `ReleaseName`/`Namespace` = `pgagroal`).
 
+### Reach: additional delivery options (assessed)
+
+A container product can carry **multiple delivery options** — adding more raises
+discoverability across buyer workflows. Assessed:
+
+- **Container image (Amazon ECS / Fargate / `docker pull`)** — _recommended,
+  low effort._ A second delivery option that points at the **same** Marketplace
+  ECR image (`elevarq/elevarq-pgagroal:1.3.0`) we already re-hosted. Reaches ECS
+  and non-Helm buyers with no new artifact. Add it as a second option on the
+  same product.
+- **CloudFormation / QuickLaunch (deploy-to-EKS)** — _optional, higher effort._
+  A one-click QuickLaunch template improves the buyer's time-to-value; worth it
+  if EKS adoption is the priority. Defer until after the first publish.
+- **EC2 Image Builder integration** (the AWS blog) — _not applicable._ It is an
+  **AMI-product-only** feature (`AmiProduct@1.0`); pgAgroal ships as a container
+  (Helm/ECR), so it does not apply. Offering pgagroal as an AMI would be a
+  separate AMI product (out of scope for the container listing).
+- **EKS-Anywhere** compatibility — requires a license-secret `OverrideParameters`
+  entry; out of scope for the free EKS listing.
+
 ### Buyer usage instructions (rendered on the listing)
 
 ```sh
