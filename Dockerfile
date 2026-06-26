@@ -3,7 +3,7 @@
 # pgagroal connection pooler - production container
 # https://github.com/pgagroal/pgagroal
 
-ARG DEBIAN_VERSION=bookworm-20260316-slim
+ARG DEBIAN_VERSION=bookworm-20260623-slim
 ARG PGAGROAL_VERSION=2.1.0
 
 # =============================================================================

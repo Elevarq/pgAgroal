@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Class: feature
 
+### Security
+
+- Bump the Debian base-image snapshot `bookworm-20260316-slim` →
+  `bookworm-20260623-slim` so the runtime `apt-get upgrade` reaches
+  `libssl3 3.0.20-1~deb12u2`, resolving CVE-2026-45447 (HIGH — OpenSSL
+  heap use-after-free in `PKCS7_verify()`). The dated snapshot pins apt
+  to its date, so the older snapshot could not pull the fix even with
+  the existing security-upgrade step. (#60)
+
 ### Added
 
 - Integration stack: `docker-compose.yml` now composes pgagroal +
