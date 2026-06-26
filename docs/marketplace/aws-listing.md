@@ -110,12 +110,19 @@ configuration and operations are documented in the
 4. [x] Re-host the 1.3.0 image + Helm chart into the Marketplace ECR repos.
 5. [x] Resolve the `SignatureVerificationKey` requirement (§6) — not an
        image-signing gate; no action needed.
-6. [ ] `AddDeliveryOptions` — apply [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json); let AWS scan.
-7. [ ] Fill product description / categories / support / architecture diagram (§1).
-8. [ ] Legal sign-off on the EULA / entity wording (§4).
-9. [ ] Submit → AWS review.
-10. [ ] Preview + approve the **limited listing URL**.
-11. [ ] Request **Limited → Public** (Update visibility) → live.
+6. [ ] **First publish is portal-driven.** In AMMP, fill product info / §1
+       copy + add the first **Helm delivery option** (referencing the ECR
+       image + chart from step 4; field values in
+       [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json))
+       + attach the EULA. The Catalog API `AddDeliveryOptions` change type
+       **cannot** stage the first version on a Draft product
+       (`INCOMPATIBLE_PRODUCT_STATUS`) — it is for version updates once the
+       product is Limited/Public.
+7. [ ] Legal sign-off on the EULA / entity wording (§4).
+8. [ ] Submit → AWS review (scans the image + chart).
+9. [ ] Preview + approve the **limited listing URL** (product is now Limited).
+10. [ ] Request **Limited → Public** → live.
+11. [ ] _Future version bumps:_ `AddDeliveryOptions` via the Catalog API now works.
 
 ## 6. Decisions & open questions
 
