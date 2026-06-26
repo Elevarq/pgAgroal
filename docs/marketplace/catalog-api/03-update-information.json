@@ -10,20 +10,42 @@
       "DetailsDocument": {
         "ProductTitle": "Elevarq pgAgroal",
         "LogoUrl": "https://elevarq-marketplace-public.s3.amazonaws.com/logos/elevarq-512.png",
-        "ShortDescription": "Production-hardened pgagroal connection pooler for PostgreSQL - non-root, signed, multi-arch container with a Helm chart. No telemetry.",
-        "LongDescription": "Elevarq pgAgroal is an open-source (BSD-3-Clause) production container packaging of pgagroal, a high-performance connection pooler for PostgreSQL. pgagroal 2.1.0 is built from pinned upstream source on Debian and shipped as a hardened runtime: non-root (UID 1000), all Linux capabilities dropped, read-only root filesystem, and seccomp RuntimeDefault. Images are multi-arch (linux/amd64 + linux/arm64), cosign-signed (keyless, GitHub OIDC) with SBOM and SLSA provenance attached. The Helm chart ships liveness/readiness probes, a PodDisruptionBudget, an optional Prometheus metrics port, and least-privilege security contexts. There is no telemetry and no data egress to Elevarq.",
+        "ShortDescription": "Production-ready pgagroal container for PostgreSQL with non-root security, signed multi-arch images, Kubernetes Helm chart, and zero telemetry.",
+        "LongDescription": "Elevarq pgAgroal is an open-source (BSD-3-Clause) production-ready container image for pgagroal, the high-performance connection pooler for PostgreSQL. Built from pinned upstream pgagroal 2.1.0 sources on Debian, it is designed for secure, repeatable production deployments. The runtime runs as a non-root user (UID 1000), drops all Linux capabilities, uses a read-only root filesystem, and defaults to the RuntimeDefault seccomp profile. Multi-architecture images (linux/amd64 and linux/arm64) are cosign-signed using GitHub OIDC and include an SBOM and SLSA provenance. A production-ready Helm chart simplifies Kubernetes deployment with liveness and readiness probes, a PodDisruptionBudget, least-privilege security contexts, and optional Prometheus metrics. Elevarq pgAgroal contains no telemetry and sends no data outside your environment.",
         "Highlights": [
           "Hardened runtime: non-root (UID 1000), read-only root filesystem, all Linux capabilities dropped, seccomp RuntimeDefault",
           "Multi-arch (amd64/arm64), cosign-signed with SBOM and SLSA provenance attestations",
           "Helm chart for Amazon EKS: liveness/readiness probes, PodDisruptionBudget, optional Prometheus metrics"
         ],
         "AdditionalResources": [
-          { "Text": "Documentation", "Url": "https://github.com/Elevarq/pgAgroal" },
-          { "Text": "Security policy", "Url": "https://github.com/Elevarq/pgAgroal/blob/main/SECURITY.md" }
+          {
+            "Text": "Documentation",
+            "Url": "https://github.com/Elevarq/pgAgroal"
+          },
+          {
+            "Text": "Security policy",
+            "Url": "https://github.com/Elevarq/pgAgroal/blob/main/SECURITY.md"
+          }
         ],
         "SupportDescription": "Community support via GitHub Issues at https://github.com/Elevarq/pgAgroal. Report security vulnerabilities to security@elevarq.com (see SECURITY.md).",
-        "Categories": ["Infrastructure Software"],
-        "SearchKeywords": ["PostgreSQL", "Postgres", "connection pooler", "connection pooling", "pgagroal", "database", "Amazon RDS", "Aurora", "high availability", "failover", "Kubernetes", "Helm", "EKS"]
+        "Categories": [
+          "Infrastructure Software"
+        ],
+        "SearchKeywords": [
+          "PostgreSQL",
+          "Postgres",
+          "connection pooler",
+          "connection pooling",
+          "pgagroal",
+          "database",
+          "Amazon RDS",
+          "Aurora",
+          "high availability",
+          "failover",
+          "Kubernetes",
+          "Helm",
+          "EKS"
+        ]
       }
     }
   ]
