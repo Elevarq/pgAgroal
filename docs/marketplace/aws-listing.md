@@ -33,12 +33,23 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
 | Product code | `5xbw2q7ywbjgtszgclgwlj13v` |
 | Entity ID | `prod-jl5oxsgdp4rla` |
 | Short description | Production-hardened pgagroal connection pooler for PostgreSQL — non-root, signed, multi-arch container with a Helm chart. No telemetry. |
-| Long description | Elevarq pgAgroal is an open-source (BSD-3-Clause) production container packaging of [pgagroal](https://github.com/agroal/pgagroal), a high-performance connection pooler for PostgreSQL. pgagroal 2.1.0 is built from pinned upstream source on Debian and shipped as a hardened runtime: **non-root** (UID 1000), **all Linux capabilities dropped**, **read-only root filesystem**, and **seccomp RuntimeDefault**. Images are **multi-arch** (linux/amd64 + linux/arm64), **cosign-signed** (keyless, GitHub OIDC) with **SBOM and SLSA provenance** attached. The Helm chart ships liveness/readiness probes, a PodDisruptionBudget, an optional Prometheus metrics port, and least-privilege security contexts. There is **no telemetry and no data egress to Elevarq**. |
+| Long description | Elevarq pgAgroal is an open-source (BSD-3-Clause) production container packaging of [pgagroal](https://github.com/pgagroal/pgagroal), a high-performance connection pooler for PostgreSQL. pgagroal 2.1.0 is built from pinned upstream source on Debian and shipped as a hardened runtime: **non-root** (UID 1000), **all Linux capabilities dropped**, **read-only root filesystem**, and **seccomp RuntimeDefault**. Images are **multi-arch** (linux/amd64 + linux/arm64), **cosign-signed** (keyless, GitHub OIDC) with **SBOM and SLSA provenance** attached. The Helm chart ships liveness/readiness probes, a PodDisruptionBudget, an optional Prometheus metrics port, and least-privilege security contexts. There is **no telemetry and no data egress to Elevarq**. |
 | Categories _(confirm against AMMP list)_ | Database / Infrastructure Software |
+| Search keywords | PostgreSQL, Postgres, connection pooler, connection pooling, pgagroal, database, Amazon RDS, Aurora, high availability, failover, Kubernetes, Helm, EKS |
 | Vendor | Elevarq (DBA of Scantr LLC) |
 | Pricing | Free |
 | Source / homepage | https://github.com/Elevarq/pgAgroal |
 | License | BSD-3-Clause |
+
+> **Keyword note — "pgbouncer".** Listing a competitor/other-project name
+> (e.g. `pgbouncer`) as a bare search keyword is a policy risk: AWS Marketplace
+> container-product policies prohibit metadata that is misleading or references
+> third-party names/trademarks you don't own, and reviewers can reject the
+> listing for it. Recommended instead: compete on the **factual feature
+> story** in the long description (built-in health check, failover, Prometheus
+> console, vault encryption, hardened non-root runtime) rather than capturing a
+> competitor's search traffic by name. Decision deferred to the listing owner /
+> counsel before submit; the keyword list above intentionally omits it.
 
 ## 2. Delivery option — Helm chart (primary)
 
@@ -50,6 +61,26 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
   `INVALID_HELM_CHART_IMAGES`).
 - Catalog-API change-set: [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json)
   (concrete URIs, `ReleaseName`/`Namespace` = `pgagroal`).
+
+### Reach: additional delivery options (assessed)
+
+A container product can carry **multiple delivery options** — adding more raises
+discoverability across buyer workflows. Assessed:
+
+- **Container image (Amazon ECS / Fargate / `docker pull`)** — _recommended,
+  low effort._ A second delivery option that points at the **same** Marketplace
+  ECR image (`elevarq/elevarq-pgagroal:1.3.0`) we already re-hosted. Reaches ECS
+  and non-Helm buyers with no new artifact. Add it as a second option on the
+  same product.
+- **CloudFormation / QuickLaunch (deploy-to-EKS)** — _optional, higher effort._
+  A one-click QuickLaunch template improves the buyer's time-to-value; worth it
+  if EKS adoption is the priority. Defer until after the first publish.
+- **EC2 Image Builder integration** (the AWS blog) — _not applicable._ It is an
+  **AMI-product-only** feature (`AmiProduct@1.0`); pgAgroal ships as a container
+  (Helm/ECR), so it does not apply. Offering pgagroal as an AMI would be a
+  separate AMI product (out of scope for the container listing).
+- **EKS-Anywhere** compatibility — requires a license-secret `OverrideParameters`
+  entry; out of scope for the free EKS listing.
 
 ### Buyer usage instructions (rendered on the listing)
 
@@ -94,10 +125,13 @@ configuration and operations are documented in the
 
 ## 4. License terms
 
-- Draft EULA: [`EULA.md`](EULA.md) — a custom EULA referencing the
-  BSD-3-Clause license (recommended for a free OSS product over the Standard
-  Contract for AWS Marketplace / SCMP). **Needs legal review** before
-  submission (entity wording: Scantr LLC dba Elevarq).
+- Customer-facing EULA (upload-ready): [`EULA.md`](EULA.md) — a clean custom
+  EULA referencing the BSD-3-Clause license. This is the artifact submitted to
+  AWS Marketplace; it contains contract text only.
+- Decision rationale + counsel gates: [`EULA-review-notes.md`](EULA-review-notes.md)
+  — custom-EULA-vs-SCMP decision, the Scantr LLC dba Elevarq entity gate, and
+  the seller-entity / EULA-party / `LICENSE`-copyright alignment. **Legal
+  sign-off required** before submission.
 
 ## 5. Submit checklist (ordered)
 
@@ -107,12 +141,19 @@ configuration and operations are documented in the
 4. [x] Re-host the 1.3.0 image + Helm chart into the Marketplace ECR repos.
 5. [x] Resolve the `SignatureVerificationKey` requirement (§6) — not an
        image-signing gate; no action needed.
-6. [ ] `AddDeliveryOptions` — apply [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json); let AWS scan.
-7. [ ] Fill product description / categories / support / architecture diagram (§1).
-8. [ ] Legal sign-off on the EULA / entity wording (§4).
-9. [ ] Submit → AWS review.
-10. [ ] Preview + approve the **limited listing URL**.
-11. [ ] Request **Limited → Public** (Update visibility) → live.
+6. [ ] **First publish is portal-driven.** In AMMP, fill product info / §1
+       copy + add the first **Helm delivery option** (referencing the ECR
+       image + chart from step 4; field values in
+       [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json))
+       + attach the EULA. The Catalog API `AddDeliveryOptions` change type
+       **cannot** stage the first version on a Draft product
+       (`INCOMPATIBLE_PRODUCT_STATUS`) — it is for version updates once the
+       product is Limited/Public.
+7. [ ] Legal sign-off on the EULA / entity wording (§4).
+8. [ ] Submit → AWS review (scans the image + chart).
+9. [ ] Preview + approve the **limited listing URL** (product is now Limited).
+10. [ ] Request **Limited → Public** → live.
+11. [ ] _Future version bumps:_ `AddDeliveryOptions` via the Catalog API now works.
 
 ## 6. Decisions & open questions
 

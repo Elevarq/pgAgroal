@@ -25,9 +25,28 @@ repos are known.
 |------|-----|-------|
 | Create product (Draft) + ECR repos | **API** — `CreateProduct` + `AddRepositories` | done |
 | Push image + Helm chart into the ECR repos | **CLI** — see "Re-host" below | done (1.3.0) |
-| Add the 1.3.0 Helm delivery version | **API** — `02-add-helm-delivery.json` (`AddDeliveryOptions` / `HelmDeliveryOptionDetails`) | ready (gated on EULA legal) |
-| Product info (descriptions, categories, support, EULA) | **Portal** (AMMP) — simplest for a first listing | pending |
+| First listing: product info + first Helm delivery option + EULA → submit | **Portal** (AMMP) — required; the API cannot stage the first version on a Draft (see below) | pending |
+| Subsequent Helm delivery versions | **API** — `02-add-helm-delivery.json` (`AddDeliveryOptions` / `HelmDeliveryOptionDetails`) — only once the product is Limited/Public | for later version bumps |
 | Publish **Limited → Public** | **Portal** (AMMP) submit + limited-listing-URL approval | pending |
+
+## `AddDeliveryOptions` requires a non-Draft product (verified)
+
+Running `02-add-helm-delivery.json` against the Draft product fails fast:
+
+```
+INCOMPATIBLE_PRODUCT_STATUS — "Use a Public or Limited or Restricted product."
+```
+
+`AddDeliveryOptions` is a **version-update** change type: it adds a new version
+to a product that is **already Limited/Public**. It cannot perform the initial
+Draft → Limited publish. So the **first** listing — product description,
+categories, support, the first Helm delivery option (referencing the ECR
+image + chart we re-hosted), and the EULA — is assembled and submitted in the
+**AMMP portal**, which moves the product to Limited. The values in
+`02-add-helm-delivery.json` and `../aws-listing.md` map directly onto the
+portal's Helm-delivery and product-info forms. Keep the change-set for the
+**next** version bump (e.g. 1.3.1 / 1.4.0), when the product is Limited/Public
+and the API path works.
 
 ## Re-host (done for 1.3.0)
 
