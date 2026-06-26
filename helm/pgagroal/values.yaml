@@ -3,9 +3,10 @@ replicaCount: 2
 
 image:
   # -- Container image repository
-  repository: pgagroal
-  # -- Image tag (must match appVersion unless overridden)
-  tag: "2.1.0"
+  repository: ghcr.io/elevarq/pgagroal
+  # -- Image tag. Empty defaults to the chart version (the tag the release
+  # workflow publishes the image under). Override to pin a different tag.
+  tag: ""
   # -- Image pull policy
   pullPolicy: IfNotPresent
 
