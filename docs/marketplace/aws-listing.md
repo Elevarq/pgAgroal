@@ -35,10 +35,21 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
 | Short description | Production-hardened pgagroal connection pooler for PostgreSQL — non-root, signed, multi-arch container with a Helm chart. No telemetry. |
 | Long description | Elevarq pgAgroal is an open-source (BSD-3-Clause) production container packaging of [pgagroal](https://github.com/pgagroal/pgagroal), a high-performance connection pooler for PostgreSQL. pgagroal 2.1.0 is built from pinned upstream source on Debian and shipped as a hardened runtime: **non-root** (UID 1000), **all Linux capabilities dropped**, **read-only root filesystem**, and **seccomp RuntimeDefault**. Images are **multi-arch** (linux/amd64 + linux/arm64), **cosign-signed** (keyless, GitHub OIDC) with **SBOM and SLSA provenance** attached. The Helm chart ships liveness/readiness probes, a PodDisruptionBudget, an optional Prometheus metrics port, and least-privilege security contexts. There is **no telemetry and no data egress to Elevarq**. |
 | Categories _(confirm against AMMP list)_ | Database / Infrastructure Software |
+| Search keywords | PostgreSQL, Postgres, connection pooler, connection pooling, pgagroal, database, Amazon RDS, Aurora, high availability, failover, Kubernetes, Helm, EKS |
 | Vendor | Elevarq (DBA of Scantr LLC) |
 | Pricing | Free |
 | Source / homepage | https://github.com/Elevarq/pgAgroal |
 | License | BSD-3-Clause |
+
+> **Keyword note — "pgbouncer".** Listing a competitor/other-project name
+> (e.g. `pgbouncer`) as a bare search keyword is a policy risk: AWS Marketplace
+> container-product policies prohibit metadata that is misleading or references
+> third-party names/trademarks you don't own, and reviewers can reject the
+> listing for it. Recommended instead: compete on the **factual feature
+> story** in the long description (built-in health check, failover, Prometheus
+> console, vault encryption, hardened non-root runtime) rather than capturing a
+> competitor's search traffic by name. Decision deferred to the listing owner /
+> counsel before submit; the keyword list above intentionally omits it.
 
 ## 2. Delivery option — Helm chart (primary)
 
