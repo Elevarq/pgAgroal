@@ -33,7 +33,7 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
 | Product code | `5xbw2q7ywbjgtszgclgwlj13v` |
 | Entity ID | `prod-jl5oxsgdp4rla` |
 | Short description | Production-hardened pgagroal connection pooler for PostgreSQL — non-root, signed, multi-arch container with a Helm chart. No telemetry. |
-| Long description | Elevarq pgAgroal is an open-source (BSD-3-Clause) production container packaging of [pgagroal](https://github.com/agroal/pgagroal), a high-performance connection pooler for PostgreSQL. pgagroal 2.1.0 is built from pinned upstream source on Debian and shipped as a hardened runtime: **non-root** (UID 1000), **all Linux capabilities dropped**, **read-only root filesystem**, and **seccomp RuntimeDefault**. Images are **multi-arch** (linux/amd64 + linux/arm64), **cosign-signed** (keyless, GitHub OIDC) with **SBOM and SLSA provenance** attached. The Helm chart ships liveness/readiness probes, a PodDisruptionBudget, an optional Prometheus metrics port, and least-privilege security contexts. There is **no telemetry and no data egress to Elevarq**. |
+| Long description | Elevarq pgAgroal is an open-source (BSD-3-Clause) production container packaging of [pgagroal](https://github.com/pgagroal/pgagroal), a high-performance connection pooler for PostgreSQL. pgagroal 2.1.0 is built from pinned upstream source on Debian and shipped as a hardened runtime: **non-root** (UID 1000), **all Linux capabilities dropped**, **read-only root filesystem**, and **seccomp RuntimeDefault**. Images are **multi-arch** (linux/amd64 + linux/arm64), **cosign-signed** (keyless, GitHub OIDC) with **SBOM and SLSA provenance** attached. The Helm chart ships liveness/readiness probes, a PodDisruptionBudget, an optional Prometheus metrics port, and least-privilege security contexts. There is **no telemetry and no data egress to Elevarq**. |
 | Categories _(confirm against AMMP list)_ | Database / Infrastructure Software |
 | Vendor | Elevarq (DBA of Scantr LLC) |
 | Pricing | Free |
@@ -94,10 +94,13 @@ configuration and operations are documented in the
 
 ## 4. License terms
 
-- Draft EULA: [`EULA.md`](EULA.md) — a custom EULA referencing the
-  BSD-3-Clause license (recommended for a free OSS product over the Standard
-  Contract for AWS Marketplace / SCMP). **Needs legal review** before
-  submission (entity wording: Scantr LLC dba Elevarq).
+- Customer-facing EULA (upload-ready): [`EULA.md`](EULA.md) — a clean custom
+  EULA referencing the BSD-3-Clause license. This is the artifact submitted to
+  AWS Marketplace; it contains contract text only.
+- Decision rationale + counsel gates: [`EULA-review-notes.md`](EULA-review-notes.md)
+  — custom-EULA-vs-SCMP decision, the Scantr LLC dba Elevarq entity gate, and
+  the seller-entity / EULA-party / `LICENSE`-copyright alignment. **Legal
+  sign-off required** before submission.
 
 ## 5. Submit checklist (ordered)
 

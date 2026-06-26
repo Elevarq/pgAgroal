@@ -1,29 +1,4 @@
-# End User License Agreement — Elevarq pgAgroal (AWS Marketplace)
-
-> **Draft — requires legal review before use on the listing.** This is the
-> proposed EULA text for the free AWS Marketplace listing. Confirm the legal
-> entity name and terms with counsel before submitting.
->
-> **For counsel — entity/license alignment:** this EULA names **Scantr LLC,
-> doing business as Elevarq**, while the repository `LICENSE` (BSD-3-Clause)
-> carries the copyright line **"Elevarq"**. Decide whether the `LICENSE`
-> copyright line should also read **"Scantr LLC dba Elevarq"** so the two are
-> consistent, and confirm the entity named in the Marketplace seller
-> registration matches.
-
-## Recommended option
-
-For a **free, open-source** product, the simplest path is a short EULA that
-grants use under the product's existing open-source license (BSD-3-Clause).
-The alternative is AWS's pre-built **Standard Contract for AWS Marketplace
-(SCMP)** — selectable in the listing instead of a custom EULA. We recommend
-the **custom EULA below (referencing BSD-3-Clause)** because pgAgroal is
-already distributed under that permissive license and the SCMP's
-commercial-support/warranty framing fits paid products better.
-
----
-
-## Elevarq pgAgroal — End User License Agreement
+# Elevarq pgAgroal — End User License Agreement
 
 This End User License Agreement ("Agreement") governs your use of **Elevarq
 pgAgroal** (the "Software"), made available by **Scantr LLC, doing business as
@@ -35,17 +10,23 @@ Elevarq** ("Elevarq"), through AWS Marketplace.
    subscribing to or using the Software, you agree to the terms of that
    license, which govern your rights to use, copy, modify, and redistribute
    the Software. The Software packages the upstream
-   [pgagroal](https://github.com/agroal/pgagroal) connection pooler, which is
+   [pgagroal](https://github.com/pgagroal/pgagroal) connection pooler, which is
    also distributed under the BSD 3-Clause License.
 
-2. **No fees.** The Software is provided at no charge through AWS Marketplace.
-   AWS Marketplace terms also apply to your subscription.
+2. **No software fee.** The Software is offered at no software charge through
+   AWS Marketplace. You remain responsible for the AWS infrastructure and
+   service charges you incur while running the Software (for example, Amazon
+   EKS, Amazon EC2, storage, and data-transfer charges). The AWS Marketplace
+   terms also apply to your subscription.
 
-3. **Data.** The Software is a connection pooler that runs entirely within your
-   own infrastructure. It sends **no telemetry and no data to Elevarq**. All
-   database traffic and configuration remain within your AWS account /
-   infrastructure. Elevarq does not receive telemetry, usage data, or any data
-   processed by the Software.
+3. **Data.** As packaged, the Software sends no telemetry and no customer data
+   to Elevarq. The Software is a connection pooler that runs within your own
+   infrastructure; your database traffic and configuration remain within your
+   AWS account and customer-controlled infrastructure. Any data associated with
+   your AWS Marketplace subscription, Amazon ECR access, or AWS account (for
+   example, subscription and entitlement records) is handled by AWS under the
+   applicable AWS Marketplace and AWS service terms; it is not collected by the
+   Software, which sends no telemetry to Elevarq.
 
 4. **No warranty.** THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
    KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -58,12 +39,12 @@ Elevarq** ("Elevarq"), through AWS Marketplace.
    the BSD 3-Clause License.
 
 6. **Support.** Community support is provided through GitHub Issues at
-   https://github.com/Elevarq/pgAgroal. Commercial or enterprise support, if
-   desired, is available separately from Elevarq and is not part of this free
-   offering.
+   https://github.com/Elevarq/pgAgroal. Security vulnerabilities should be
+   reported as described in Section 7.
 
-7. **Security.** Vulnerability reporting and supported-version policy are
-   described at https://github.com/Elevarq/pgAgroal/blob/main/SECURITY.md.
+7. **Security.** Vulnerability reporting and the supported-version policy are
+   described at https://github.com/Elevarq/pgAgroal/blob/main/SECURITY.md
+   (security contact: security@elevarq.com).
 
 In the event of any conflict between this Agreement and the BSD 3-Clause
 License with respect to the license grant, warranty, and liability, the BSD

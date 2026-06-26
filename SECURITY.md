@@ -43,7 +43,10 @@ details on build integrity, verification, and auditability, see
 
 ## Supported Versions
 
+Security fixes are released against the latest minor version. Upgrade to the
+current release to receive them.
+
 | Version | Supported |
 |---|---|
-| 0.2.x | Yes |
-| 0.1.x | No |
+| 1.3.x | Yes |
+| < 1.3.0 | No |
