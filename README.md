@@ -81,7 +81,7 @@ the release version):
 
 ```bash
 helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal \
-  --version 1.2.0 \
+  --version 1.3.0 \
   --set postgresql.host=my-postgres \
   --set credentials.username=app \
   --set credentials.password=secret \
@@ -92,7 +92,7 @@ The published chart is cosign-signed (keyless, GitHub OIDC) -- the same
 trust root as the container image. Verify before install:
 
 ```bash
-cosign verify ghcr.io/elevarq/charts/pgagroal:1.2.0 \
+cosign verify ghcr.io/elevarq/charts/pgagroal:1.3.0 \
   --certificate-identity-regexp='https://github.com/Elevarq/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 ```
@@ -209,14 +209,14 @@ In production, pin a version tag rather than `latest`:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "1.2.0"
+  tag: "1.3.0"
   pullPolicy: IfNotPresent
 ```
 
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.2.0 \
+cosign verify elevarq/pgagroal:1.3.0 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -261,11 +261,11 @@ or [Kyverno](https://kyverno.io/).
 
 | Component | Version |
 |---|---|
-| Project | 1.2.0 |
+| Project | 1.3.0 |
 | pgagroal | 2.1.0 |
 | Debian base | bookworm-20260316-slim |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 1.2.0 |
+| Helm chart | 1.3.0 |
 
 ## Related
 
