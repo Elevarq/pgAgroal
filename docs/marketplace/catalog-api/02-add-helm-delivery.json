@@ -1,0 +1,36 @@
+{
+  "Catalog": "AWSMarketplace",
+  "ChangeSet": [
+    {
+      "ChangeType": "AddDeliveryOptions",
+      "Entity": {
+        "Type": "ContainerProduct@1.0",
+        "Identifier": "prod-jl5oxsgdp4rla"
+      },
+      "DetailsDocument": {
+        "Version": {
+          "VersionTitle": "1.3.0",
+          "ReleaseNotes": "pgagroal connection pooler 2.1.0, packaged as a non-root, multi-arch (linux/amd64 + linux/arm64) container with a Helm chart. Release notes: https://github.com/Elevarq/pgAgroal/releases/tag/v1.3.0"
+        },
+        "DeliveryOptions": [
+          {
+            "DeliveryOptionTitle": "Helm chart (Amazon EKS)",
+            "Details": {
+              "HelmDeliveryOptionDetails": {
+                "CompatibleServices": ["EKS"],
+                "ContainerImages": [
+                  "709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal:1.3.0"
+                ],
+                "HelmChartUri": "709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart:1.3.0",
+                "Description": "Production-hardened pgagroal connection pooler for PostgreSQL, delivered as a cosign-signed Helm chart. Runs non-root (UID 1000) with all Linux capabilities dropped, a read-only root filesystem, and seccomp RuntimeDefault. Includes liveness/readiness probes, a PodDisruptionBudget, and an optional Prometheus metrics port.",
+                "UsageInstructions": "1. Authenticate Helm to the AWS Marketplace registry:\n   aws ecr get-login-password --region <region> | helm registry login --username AWS --password-stdin 709825985650.dkr.ecr.us-east-1.amazonaws.com\n\n2. Create a values file (pgagroal-values.yaml) pointing at your PostgreSQL backend:\n   postgresql:\n     host: <postgres-host>\n     port: 5432\n   credentials:\n     username: <app-user>\n     password: <app-password>   # or set credentials.existingSecret\n\n3. Install into your cluster:\n   helm install pgagroal oci://709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart --version 1.3.0 -n pgagroal --create-namespace -f pgagroal-values.yaml\n\n4. Point applications at the pgagroal Service (port 6432). Full configuration: https://github.com/Elevarq/pgAgroal",
+                "ReleaseName": "pgagroal",
+                "Namespace": "pgagroal"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
