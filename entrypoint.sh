@@ -68,13 +68,26 @@ main() {
         < "${CONF_DIR}/pgagroal_hba.conf.template" > "${hba_file}"
 
     # ── Register pgagroal user if credentials supplied ────────────────────
+    # With the hardened default allow_unknown_users=false, pgagroal accepts
+    # ONLY users present in the users file, so the supplied user must be
+    # registered or no client can connect. pgagroal stores the password
+    # encrypted under a master key, so create the master key first, then add
+    # the user with `pgagroal-admin ... user add` (NOT `add-user`, which does
+    # not exist in pgagroal 2.x). pgagroal loads the default users file
+    # (${CONF_DIR}/pgagroal_users.conf) automatically at startup.
     if [ -n "${PG_USERNAME:-}" ] && [ -n "${PG_PASSWORD:-}" ]; then
         local users_file="${CONF_DIR}/pgagroal_users.conf"
-        # pgagroal-admin add-user reads from stdin: username\npassword\n
-        printf '%s\n%s\n' "${PG_USERNAME}" "${PG_PASSWORD}" \
-            | pgagroal-admin -f "${users_file}" -g user add-user \
-            && echo "Registered user: ${PG_USERNAME}" \
-            || echo "Warning: could not register user (allow_unknown_users=${PGAGROAL_ALLOW_UNKNOWN_USERS}, passthrough auth still works when true)"
+        # The master key only protects this in-container users file; a fresh
+        # key each start is fine because the users file is regenerated too.
+        # `master-key` is create-or-update, so it is safe to run every start.
+        pgagroal-admin -P "${PGAGROAL_MASTER_KEY:-$(head -c 18 /dev/urandom | base64)}" master-key >/dev/null 2>&1 \
+            || echo "Warning: could not create pgagroal master key"
+        rm -f "${users_file}"
+        if pgagroal-admin -f "${users_file}" -U "${PG_USERNAME}" -P "${PG_PASSWORD}" user add >/dev/null 2>&1; then
+            echo "Registered user: ${PG_USERNAME}"
+        else
+            echo "Warning: could not register user ${PG_USERNAME} (allow_unknown_users=${PGAGROAL_ALLOW_UNKNOWN_USERS}; passthrough auth still works when true)"
+        fi
     fi
 
     echo "Starting pgagroal on ${PGAGROAL_HOST}:${PGAGROAL_PORT} -> ${PG_BACKEND_HOST}:${PG_BACKEND_PORT}"
