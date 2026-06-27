@@ -25,28 +25,47 @@ repos are known.
 |------|-----|-------|
 | Create product (Draft) + ECR repos | **API** — `CreateProduct` + `AddRepositories` | done |
 | Push image + Helm chart into the ECR repos | **CLI** — see "Re-host" below | done (1.3.0) |
-| First listing: product info + first Helm delivery option + EULA → submit | **Portal** (AMMP) — required; the API cannot stage the first version on a Draft (see below) | pending |
-| Subsequent Helm delivery versions | **API** — `02-add-helm-delivery.json` (`AddDeliveryOptions` / `HelmDeliveryOptionDetails`) — only once the product is Limited/Public | for later version bumps |
-| Publish **Limited → Public** | **Portal** (AMMP) submit + limited-listing-URL approval | pending |
+| Product info (title, descriptions, highlights, categories, keywords, logo) | **API** — `UpdateInformation` (`03-update-information.json`); works on a Draft | done |
+| Release Draft → Limited | **API** — `ReleaseProduct` (empty DetailsDocument) | pending |
+| Add the Helm delivery version | **API** — `02-add-helm-delivery.json` (`AddDeliveryOptions`) — only once Limited | pending (after ReleaseProduct) |
+| Free offer (legal/EULA/support terms) | **API** — `Offer@1.0`: `CreateOffer` + `ReleaseOffer` | pending (gated on EULA legal sign-off) |
+| Publish **Limited → Public** | **API** — `UpdateVisibility` `TargetVisibility: Public` (triggers AWS manual review) | pending (gated on EULA + explicit go) |
 
-## `AddDeliveryOptions` requires a non-Draft product (verified)
+## The first publish IS fully Catalog-API-doable (verified)
 
-Running `02-add-helm-delivery.json` against the Draft product fails fast:
+Earlier this doc said the first publish was portal-only — **that was wrong**.
+Verified against current AWS docs and by running the calls, the whole sequence
+is API-driven (no AMMP web UI):
 
-```
-INCOMPATIBLE_PRODUCT_STATUS — "Use a Public or Limited or Restricted product."
-```
+1. `UpdateInformation` — populate all product metadata. **Works on a Draft**
+   and requires **all** core fields in one call: `ProductTitle`,
+   `ShortDescription`, `LongDescription`, `LogoUrl`, `Highlights` (max 3),
+   `AdditionalResources`, `SupportDescription`, `Categories` (1-3),
+   `SearchKeywords` (max 15, ≤250 combined chars). Done — see
+   `03-update-information.json`.
+2. `ReleaseProduct` (empty `DetailsDocument`) — moves Draft → **Limited**. This
+   is the step that unblocks `AddDeliveryOptions`.
+3. `AddDeliveryOptions` (`02-add-helm-delivery.json`) — adds the Helm version.
+   On a **Draft** it fails `INCOMPATIBLE_PRODUCT_STATUS` ("Use a Public or
+   Limited or Restricted product"); it needs the product Limited/Public first
+   (hence step 2).
+4. `Offer@1.0` (`CreateOffer` + `ReleaseOffer`) — a transactable product needs
+   an offer even when free; the EULA / legal / support terms attach here, so
+   this step is gated on legal sign-off.
+5. `UpdateVisibility` `TargetVisibility: Public` — the public launch. API call,
+   but AWS Seller Operations runs a manual review. Do not run without the EULA
+   signed and explicit go.
 
-`AddDeliveryOptions` is a **version-update** change type: it adds a new version
-to a product that is **already Limited/Public**. It cannot perform the initial
-Draft → Limited publish. So the **first** listing — product description,
-categories, support, the first Helm delivery option (referencing the ECR
-image + chart we re-hosted), and the EULA — is assembled and submitted in the
-**AMMP portal**, which moves the product to Limited. The values in
-`02-add-helm-delivery.json` and `../aws-listing.md` map directly onto the
-portal's Helm-delivery and product-info forms. Keep the change-set for the
-**next** version bump (e.g. 1.3.1 / 1.4.0), when the product is Limited/Public
-and the API path works.
+### LogoUrl must be an S3 URL
+
+`UpdateInformation`'s `LogoUrl` field regex accepts any https URL, but a deeper
+`INVALID_MEDIA` check rejects non-S3 hosts: a live logo on `https://elevarq.com/...`
+failed with *"Provide a new URL for media stored in S3."* The logo therefore
+lives in S3. We host it in a scoped public-read bucket
+(`elevarq-marketplace-public`, `GetObject` on the `logos/` prefix only) at
+`https://elevarq-marketplace-public.s3.amazonaws.com/logos/elevarq-512.png`
+(512×512 transparent PNG rendered from the website `app/icon.svg` mark; the
+Elevarq company logo, reused across the portfolio).
 
 ## Re-host (done for 1.3.0)
 
@@ -69,18 +88,20 @@ docker buildx imagetools create \
 # the granted repo path, repackage, push (see "Chart path gotcha" below).
 ```
 
-## Apply the Helm delivery option
+## Apply a change-set
 
 ```sh
 aws marketplace-catalog start-change-set \
   --catalog AWSMarketplace \
-  --cli-input-json file://docs/marketplace/catalog-api/02-add-helm-delivery.json
+  --cli-input-json file://docs/marketplace/catalog-api/03-update-information.json
 # then poll: aws marketplace-catalog describe-change-set --catalog AWSMarketplace --change-set-id <id>
 ```
 
-This triggers AWS's async ingestion scan of the image + chart. Do **not** run it
-until the EULA / entity wording is signed off (it is a draft-stage change, but
-we sequence it with the rest of the submit).
+`03-update-information.json` (product info) is done. `02-add-helm-delivery.json`
+must run **after** `ReleaseProduct` (it needs the product Limited; on a Draft it
+fails `INCOMPATIBLE_PRODUCT_STATUS`), and it triggers AWS's async ingestion scan
+of the image + chart. The offer (and thus the path to Public) is gated on the
+EULA / entity wording sign-off.
 
 ## Constraints baked into the change-set (from the API error catalog)
 
