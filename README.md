@@ -329,7 +329,7 @@ packaging version and the bundled pgagroal version move independently).
 | Component | Version |
 |---|---|
 | Elevarq packaging (Project) | 1.4.0 |
-| pgagroal (bundled upstream) | 2.1.0 |
+| pgagroal | 2.1.0 |
 | Debian base | bookworm-20260623-slim (digest-pinned) |
 | PostgreSQL (compose) | 17.4-bookworm |
 | Helm chart | 1.4.0 |
