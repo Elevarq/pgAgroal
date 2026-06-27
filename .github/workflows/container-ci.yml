@@ -157,6 +157,11 @@ jobs:
       - name: Run backend restart test
         run: bash test/resilience/backend-restart-test.sh
 
+      # Also exercised by publish.yml; run it here so PR CI catches default
+      # changes (the test self-builds pgagroal:test).
+      - name: Run docker restart test
+        run: bash test/resilience/docker-restart-test.sh
+
   startup-failure-test:
     name: Startup Failure Mode
     needs: [build]

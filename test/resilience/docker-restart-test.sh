@@ -92,10 +92,16 @@ done
 echo "  postgres ready"
 
 echo "--- Step 4: Start pgagroal (first run) — AC-01 ---"
+# Register the pool user (PG_USERNAME/PG_PASSWORD). The hardened default
+# allow_unknown_users=false does NOT pass unknown users through to the
+# backend, so the user must be registered with pgagroal for the baseline
+# query below to authenticate. This exercises the shipped (hardened) default.
 docker run -d --name "${POOLER}" --network "${NET}" \
     -e PG_BACKEND_HOST="${PG}" \
     -e PG_BACKEND_PORT=5432 \
     -e PGAGROAL_PORT="${PGAGROAL_PORT}" \
+    -e PG_USERNAME=testuser \
+    -e PG_PASSWORD=testpass \
     "${IMAGE}" >/dev/null
 
 wait_healthy "${POOLER}" "${HEALTHY_TIMEOUT}"
