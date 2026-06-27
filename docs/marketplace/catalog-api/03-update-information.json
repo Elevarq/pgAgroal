@@ -20,7 +20,7 @@
         "AdditionalResources": [
           {
             "Text": "Documentation",
-            "Url": "https://github.com/Elevarq/pgAgroal"
+            "Url": "https://elevarq.com/docs/pgagroal-container"
           },
           {
             "Text": "Security policy",
