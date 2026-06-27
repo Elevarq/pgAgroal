@@ -2,7 +2,7 @@
 
 ## Project ownership
 
-pgAgroal is maintained by [Elevarq](https://elevarq.com). The project is
+Elevarq pgAgroal is maintained by [Elevarq](https://elevarq.com). The project is
 open source under the BSD-3-Clause license.
 
 ## Decision making

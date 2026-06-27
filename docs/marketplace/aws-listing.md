@@ -12,6 +12,15 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
 > resolved (§6 — it is the inert metering key, not an image-signing
 > requirement). Do **not** run the submit / visibility change-sets until legal
 > clears.
+>
+> **Harden-then-resubmit (v1.4.0).** The public listing target is now
+> **Elevarq packaging v1.4.0** (bundling upstream pgagroal 2.1.0), which ships
+> hardened shipped defaults. It **supersedes** the in-review v1.3.0 — do not
+> broaden v1.3.0 to Public; re-host the 1.4.0 image + chart and add the 1.4.0
+> delivery option, then publish that. The canonical paste-ready portal copy
+> (title, descriptions, highlights, delivery-option label, usage
+> instructions) lives in [`listing-copy.md`](listing-copy.md); keep this file
+> for process/status and let `listing-copy.md` own the customer-facing copy.
 
 ## 0. Pre-publish gate
 
@@ -77,7 +86,7 @@ discoverability across buyer workflows. Assessed:
   A one-click QuickLaunch template improves the buyer's time-to-value; worth it
   if EKS adoption is the priority. Defer until after the first publish.
 - **EC2 Image Builder integration** (the AWS blog) — _not applicable._ It is an
-  **AMI-product-only** feature (`AmiProduct@1.0`); pgAgroal ships as a container
+  **AMI-product-only** feature (`AmiProduct@1.0`); Elevarq pgAgroal ships as a container
   (Helm/ECR), so it does not apply. Offering pgagroal as an AMI would be a
   separate AMI product (out of scope for the container listing).
 - **EKS-Anywhere** compatibility — requires a license-secret `OverrideParameters`
@@ -92,7 +101,8 @@ aws ecr get-login-password --region <region> \
       709825985650.dkr.ecr.us-east-1.amazonaws.com
 ```
 
-Configure a values file, then install with `-f`:
+Configure a values file, then install with `-f`. Credentials are required —
+the v1.4.0 default does not pass unknown users through to the backend:
 
 ```yaml
 # pgagroal-values.yaml
@@ -102,12 +112,16 @@ postgresql:
 credentials:
   username: <app-user>
   password: <app-password>   # or set credentials.existingSecret
+# If your EKS pod network is outside RFC1918 (e.g. a 100.64.0.0/10 secondary
+# CIDR), also set the HBA allowlist to your pod CIDR:
+# pgagroal:
+#   hbaSource: "100.64.0.0/10"
 ```
 
 ```sh
 helm install pgagroal \
   oci://709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart \
-  --version 1.3.0 -n pgagroal --create-namespace -f pgagroal-values.yaml
+  --version 1.4.0 -n pgagroal --create-namespace -f pgagroal-values.yaml
 ```
 
 Applications then connect through the `pgagroal` Service on port `6432`. Full

@@ -1,6 +1,6 @@
-# pgAgroal
+# Elevarq pgAgroal
 
-Production-grade container image for [pgagroal](https://github.com/pgagroal/pgagroal) — a high-performance PostgreSQL connection pooler. Built from source, signed, SBOM-attested, multi-arch.
+Production-grade container image for [pgagroal](https://github.com/pgagroal/pgagroal) — a high-performance PostgreSQL connection pooler. Built from source, signed, SBOM-attested, multi-arch. (*Elevarq pgAgroal* is the product; *pgagroal* is the upstream pooler it bundles.)
 
 ## Why this image
 

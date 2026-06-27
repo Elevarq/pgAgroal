@@ -1,8 +1,13 @@
-# pgAgroal
+# Elevarq pgAgroal
 
 Production-grade Docker container and Helm chart for [pgagroal](https://github.com/pgagroal/pgagroal) -- a high-performance PostgreSQL connection pooler.
 
 From [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams.
+
+> **Naming.** *Elevarq pgAgroal* is this product — the container image plus
+> Helm chart. *pgagroal* (lowercase) is the upstream pooler it bundles. The
+> two are spelled differently on purpose: use "Elevarq pgAgroal" for the
+> product and lowercase "pgagroal" for the pooler, its binaries, and config.
 
 [![CI](https://github.com/Elevarq/pgAgroal/actions/workflows/container-ci.yml/badge.svg)](https://github.com/Elevarq/pgAgroal/actions/workflows/container-ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)

@@ -26,8 +26,9 @@ aws ecr get-login-password --region <region> \
 
 ## 3. Configure a values file
 
-pgAgroal is configured through the chart's values. At minimum, point it at your
-PostgreSQL backend and provide credentials:
+Elevarq pgAgroal is configured through the chart's values. At minimum, point it
+at your PostgreSQL backend and provide credentials (required — the v1.4.0
+default does not pass unknown users through to the backend):
 
 ```yaml
 # pgagroal-values.yaml
