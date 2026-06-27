@@ -5,7 +5,7 @@ HELM_RELEASE := pgagroal
 HELM_CHART   := helm/pgagroal
 NAMESPACE    := pgagroal
 
-.PHONY: build run test test-backend-restart test-docker-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-all test-validation test-refresh test-release-checks security clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
+.PHONY: build run test test-backend-restart test-docker-restart test-concurrent test-pooling test-startup-failure test-invalid-creds test-hba test-hardened test-all test-validation test-refresh test-release-checks security clean stop logs helm-lint helm-template helm-install helm-upgrade helm-uninstall refresh refresh-dry-run prepare-release release-check
 
 # ---------------------------------------------------------------------------
 # Docker
@@ -48,8 +48,16 @@ test-startup-failure:
 test-invalid-creds:
 	bash test/validation/invalid-credentials-test.sh
 
+## test-hba  : Test HBA source-address restriction (dockerless)
+test-hba:
+	bash test/validation/hba-source-test.sh
+
+## test-hardened : Test network/bind hardened defaults (needs helm; dockerless)
+test-hardened:
+	bash test/validation/hardened-defaults-test.sh
+
 ## test-validation : Run validation tests
-test-validation: test-pooling test-startup-failure test-invalid-creds
+test-validation: test-pooling test-startup-failure test-invalid-creds test-hba test-hardened
 
 ## test-all  : Run every test sequentially
 test-all: test test-backend-restart test-docker-restart test-concurrent test-validation

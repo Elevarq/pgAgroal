@@ -48,7 +48,12 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 
 **Trigger**: client connects with wrong password, or pgagroal user is not configured in PostgreSQL.
 
-**Behavior** (with `allow_unknown_users = true`, the default):
+Since v1.4.0 the shipped default is `allow_unknown_users = false`, so an
+unknown user is rejected by pgagroal at the frontend and the backend is never
+contacted. The pass-through behavior below applies when you set
+`allow_unknown_users = true` (transparent pooling):
+
+**Behavior** (with `allow_unknown_users = true`, transparent pooling):
 - pgagroal passes the credentials through to PostgreSQL
 - PostgreSQL rejects the authentication
 - pgagroal returns the authentication error to the client
@@ -88,7 +93,7 @@ Documented failure scenarios for pgagroal in this container setup. Each section 
 
 **Behavior** (two scenarios):
 
-### allow_unknown_users = true (default)
+### allow_unknown_users = true (transparent pooling; not the v1.4.0 default)
 - pgagroal does not validate credentials itself -- it passes them through
 - Clients that send the NEW password succeed immediately
 - Clients that send the OLD password fail with auth error

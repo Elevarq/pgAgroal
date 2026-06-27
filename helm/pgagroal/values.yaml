@@ -34,7 +34,11 @@ podLabels: {}
 # pgagroal configuration (passed as env vars to the entrypoint)
 # ---------------------------------------------------------------------------
 pgagroal:
-  # -- Bind address inside the container
+  # -- Bind address inside the container. Left as "*" deliberately: the pooler
+  # must bind the pod IP to be reachable via the Service, and a single value
+  # cannot predict the pod IP. Exposure is constrained at two other layers
+  # instead — the HBA source-CIDR allowlist (`hbaSource`) and the
+  # NetworkPolicy (enabled by default) — not by narrowing this bind.
   host: "*"
   # -- Bind port
   port: 6432
@@ -42,6 +46,22 @@ pgagroal:
   maxConnections: 100
   # -- Log level: fatal, error, warn, info, debug1-debug5, trace
   logLevel: info
+  # -- HBA source-address allowlist (comma-separated CIDRs). Restricts which
+  # source addresses the pooler accepts at the HBA layer. Default = RFC1918
+  # private ranges, so an accidentally-exposed pooler rejects public sources.
+  # pgagroal matches CIDRs on octet boundaries only (/8, /16, /24 — NOT /12),
+  # so 172.16.0.0/12 is expanded into its sixteen /16 blocks. The generated
+  # host lines use auth method scram-sha-256 (never trust/all). Set to "all"
+  # to accept any source address (legacy), or tighten to your client
+  # pod-network CIDR. If your pod network is outside RFC1918 (e.g. EKS
+  # 100.64.0.0/10 secondary CIDR), set this to that CIDR. The default-on
+  # NetworkPolicy is the second layer that backs the `host: "*"` bind.
+  hbaSource: "10.0.0.0/8,172.16.0.0/16,172.17.0.0/16,172.18.0.0/16,172.19.0.0/16,172.20.0.0/16,172.21.0.0/16,172.22.0.0/16,172.23.0.0/16,172.24.0.0/16,172.25.0.0/16,172.26.0.0/16,172.27.0.0/16,172.28.0.0/16,172.29.0.0/16,172.30.0.0/16,172.31.0.0/16,192.168.0.0/16"
+  # -- Pass unknown users through to the backend for authentication
+  # (transparent pooling). HARDENED DEFAULT: false — unknown users are NOT
+  # forwarded; every user must be pre-registered with pgagroal. Set true to
+  # restore transparent pooling where the backend is the sole auth gate.
+  allowUnknownUsers: false
 
 # ---------------------------------------------------------------------------
 # PostgreSQL backend
@@ -71,6 +91,54 @@ credentials:
 service:
   type: ClusterIP
   port: 6432
+
+# ---------------------------------------------------------------------------
+# NetworkPolicy (#49). A pooler fronting Postgres is a high-value
+# lateral-movement target; restricting ingress to the pods that need the
+# pooler — and egress to just the backend + DNS — limits blast radius.
+#
+# ENABLED BY DEFAULT (hardened default). The default render denies ingress
+# from OUTSIDE the release namespace and allows same-namespace pods to reach
+# the pooler, so it is reachable in-namespace without extra configuration.
+# Disable with `enabled: false` on clusters whose CNI does not enforce
+# NetworkPolicy (where the manifest would be a silent no-op).
+# ---------------------------------------------------------------------------
+networkPolicy:
+  # -- Render the NetworkPolicy. Enabled by default for defence in depth.
+  enabled: true
+  # -- Allow all pods in the SAME namespace to reach the pooler (and metrics)
+  # port. On by default so the pooler is reachable in-namespace while
+  # cross-namespace ingress is denied. Set false to deny same-namespace
+  # traffic too and admit ONLY the selectors below.
+  allowSameNamespace: true
+  # -- Additional pods allowed to reach the pooler, narrowing beyond
+  # same-namespace. Each entry is a label map, e.g.:
+  #   - app.kubernetes.io/name: my-app
+  ingressPodSelectors: []
+  # -- Namespaces allowed to reach the pooler, in addition to same-namespace
+  # and the pod selectors. Each entry is a label map matched against namespace
+  # labels.
+  ingressNamespaceSelectors: []
+  # -- Contain EGRESS in addition to ingress. Default OFF: the policy governs
+  # ingress only (the pre-auth reachability control), leaving egress
+  # unconstrained so DNS resolution and backend connectivity work on ANY
+  # cluster. Declaring policyTypes:[Egress] denies all unlisted egress, and a
+  # pinned kubeDNS CIDR breaks DNS where the cluster resolver differs (EKS
+  # CoreDNS is 10.100.0.10, not 10.96.0.10). Set true ONLY together with the
+  # correct kubeDNS below to contain egress in production.
+  restrictEgress: false
+  egress:
+    # -- (restrictEgress only) Backend Postgres CIDR(s) the pooler must reach
+    # (e.g. an RDS /32, or the pod-network CIDR for an in-cluster Postgres).
+    # If empty, egress to the backend port is allowed to 0.0.0.0/0
+    # (port-restricted) so the opt-in policy does not break backend
+    # connectivity — tighten this to your backend CIDR.
+    backendCIDRs: []
+    # -- (restrictEgress only) Kube-DNS resolver CIDR(s). MUST match your
+    # cluster or DNS breaks: EKS = 10.100.0.10/32, kubeadm default =
+    # 10.96.0.10/32. Only applied when restrictEgress=true.
+    kubeDNS:
+      - "10.96.0.10/32"
 
 # ---------------------------------------------------------------------------
 # Probes

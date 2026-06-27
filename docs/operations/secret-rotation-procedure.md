@@ -4,9 +4,16 @@ How to rotate PostgreSQL credentials used by pgagroal without downtime.
 
 ## Context
 
-pgagroal uses `allow_unknown_users = true` by default, meaning it passes credentials through to PostgreSQL without maintaining its own user store. This simplifies rotation: you only need to update the PostgreSQL password and ensure clients use the new one.
+Since v1.4.0 the shipped default is `allow_unknown_users = false`, so pgagroal
+admits only users it has registered (via PG_USERNAME/PG_PASSWORD), written to
+`/etc/pgagroal/pgagroal_users.conf` at container startup. Rotation then
+requires a pod restart to regenerate that file (see the registered-user
+procedure below).
 
-If you have registered users via `pgagroal-admin` (PG_USERNAME/PG_PASSWORD env vars), those are written to `/etc/pgagroal/pgagroal_users.conf` at container startup. Rotation requires a pod restart to regenerate this file.
+If you set `allow_unknown_users = true` (transparent pooling), pgagroal passes
+credentials through to PostgreSQL without maintaining its own user store, and
+rotation only requires updating the PostgreSQL password and ensuring clients
+use the new one.
 
 ## Docker Compose
 
@@ -42,7 +49,7 @@ PGPASSWORD=newpassword psql -h localhost -p 6432 -U testuser -d testdb -c 'SELEC
 
 ## Kubernetes / Helm
 
-### With allow_unknown_users = true (default)
+### With allow_unknown_users = true (transparent pooling; not the v1.4.0 default)
 
 Existing pooled connections continue using the old credentials until they expire (`idle_timeout`). New connections from clients must use the new password.
 

@@ -1,0 +1,105 @@
+{{- /*
+  #49 — NetworkPolicy for the pgagroal pod.
+
+  A connection pooler fronting Postgres is a high-value lateral-movement
+  target. With strong pod/container securityContext but no NetworkPolicy,
+  any in-cluster pod can reach the pooler. This policy restricts:
+
+  - Ingress (the pre-auth reachability control, ON by default): same-namespace
+    pods may reach the pooler (and metrics) port by default
+    (networkPolicy.allowSameNamespace), plus any operator-listed client
+    pods/namespaces. Ingress from OUTSIDE the namespace is denied unless an
+    explicit selector admits it.
+  - Egress (OPT-IN via networkPolicy.restrictEgress, default OFF): when on,
+    egress is contained to the backend Postgres CIDR(s) (or the backend port
+    on 0.0.0.0/0 when no CIDR is configured) + the kubeDNS resolver CIDR(s).
+    OFF by default because declaring policyTypes:[Egress] denies all
+    unlisted egress, and a pinned kubeDNS CIDR breaks DNS on clusters whose
+    resolver differs (e.g. EKS CoreDNS is 10.100.0.10, not 10.96.0.10) — which
+    would silently break backend resolution. Leaving egress unconstrained by
+    default keeps the chart portable; operators opt into egress containment
+    (and set their cluster's kubeDNS) in production.
+
+  Enabled by default (networkPolicy.enabled). Disable on clusters whose CNI
+  does not enforce NetworkPolicy — there the manifest is a silent no-op
+  rather than a security gain.
+*/}}
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pgagroal.fullname" . }}
+  labels:
+    {{- include "pgagroal.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "pgagroal.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if .Values.networkPolicy.restrictEgress }}
+    - Egress
+    {{- end }}
+  ingress:
+    {{- if or .Values.networkPolicy.allowSameNamespace .Values.networkPolicy.ingressPodSelectors .Values.networkPolicy.ingressNamespaceSelectors }}
+    - from:
+        {{- if .Values.networkPolicy.allowSameNamespace }}
+        # Same-namespace allow: an empty podSelector matches every pod in
+        # THIS policy's namespace, so in-namespace clients reach the pooler
+        # by default while other namespaces are denied.
+        - podSelector: {}
+        {{- end }}
+        {{- range .Values.networkPolicy.ingressPodSelectors }}
+        - podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+        {{- range .Values.networkPolicy.ingressNamespaceSelectors }}
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.pgagroal.port }}
+        {{- if .Values.metrics.enabled }}
+        - protocol: TCP
+          port: {{ .Values.metrics.port }}
+        {{- end }}
+    {{- else }}
+    # No ingress allowed. allowSameNamespace is false and no ingress
+    # selectors are set, so NO pod can reach the pooler. Set
+    # networkPolicy.allowSameNamespace=true or list ingress selectors.
+    {{- end }}
+  {{- if .Values.networkPolicy.restrictEgress }}
+  egress:
+    # Backend Postgres. Restricted to backendCIDRs when set; otherwise the
+    # backend port on 0.0.0.0/0 so the opt-in egress policy stays functional.
+    - to:
+        {{- with .Values.networkPolicy.egress.backendCIDRs }}
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - ipBlock:
+            cidr: "0.0.0.0/0"
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgresql.port }}
+    {{- with .Values.networkPolicy.egress.kubeDNS }}
+    # DNS
+    - to:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+  {{- end }}
+{{- end }}
