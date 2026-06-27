@@ -1,0 +1,18 @@
+{
+  "Catalog": "AWSMarketplace",
+  "ChangeSet": [
+    {
+      "ChangeType": "RestrictDeliveryOptions",
+      "Entity": {
+        "Type": "ContainerProduct@1.0",
+        "Identifier": "prod-jl5oxsgdp4rla"
+      },
+      "DetailsDocument": {
+        "DeliveryOptionIds": [
+          "bebd4cc5-c23f-404d-9c33-0d79d2fc6687",
+          "9fbd31f9-cd13-4c41-859e-7387542d4591"
+        ]
+      }
+    }
+  ]
+}
