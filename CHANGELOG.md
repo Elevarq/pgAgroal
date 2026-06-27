@@ -5,6 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-06-26
+
+Class: breaking-config
+
+This release hardens the **shipped defaults** of the Elevarq pgAgroal
+packaging. The bundled upstream pgagroal version is **unchanged at 2.1.0**
+— this release changes only how Elevarq packages and configures it. Several
+defaults now restrict access where the previous defaults were permissive, so
+deployments that relied on the old open behaviour must opt back in
+explicitly (see Migration). Consolidates #48, #49, and #50.
+
+### Migration
+
+Each hardened default and the exact knob to restore the previous behaviour:
+
+- **`allow_unknown_users` now defaults to `false`** (was `true`). Unknown
+  users are no longer transparently passed through to the backend; register
+  users with pgagroal, or restore the old behaviour with
+  `PGAGROAL_ALLOW_UNKNOWN_USERS=true` (Helm: `pgagroal.allowUnknownUsers=true`).
+- **HBA is now a CIDR allowlist, not a catch-all.** The shipped
+  `pgagroal_hba.conf` no longer contains `host all all all all`; it is
+  generated from `PGAGROAL_HBA_SOURCE` (default: the RFC1918 private ranges,
+  octet-aligned) with auth method `scram-sha-256`. Restore any-source with
+  `PGAGROAL_HBA_SOURCE=all` (Helm: `pgagroal.hbaSource=all`), or set it to
+  your client CIDR.
+- **The Helm `NetworkPolicy` is now enabled by default** (was off). It denies
+  ingress from outside the release namespace while allowing same-namespace
+  pods to reach the pooler port. Egress is left unconstrained by default for
+  portability (set `networkPolicy.restrictEgress=true`, with the correct
+  `networkPolicy.egress.kubeDNS` for your cluster, to contain it). Disable the
+  whole policy with `networkPolicy.enabled=false`, or narrow ingress with
+  `networkPolicy.ingressPodSelectors` / `networkPolicy.ingressNamespaceSelectors`.
+- **`docker-compose.yml` publishes pooler/metrics ports on `127.0.0.1`
+  only** (`6432`, `2346`, `5002`). Restore all-interface publishing by
+  changing the bind to `0.0.0.0:<port>:<port>` deliberately.
+- **pgexporter binds `0.0.0.0` (IPv4) instead of the `*` wildcard.** The
+  metrics endpoint stays reachable for the in-stack scrape over the
+  published loopback port; the IPv6 wildcard is dropped and exposure is
+  bounded by the loopback-only host publish.
+
+### Security
+
+- **HBA source-address restriction (#48).** The pooler's `pgagroal_hba.conf`
+  is generated from `PGAGROAL_HBA_SOURCE` (`pgagroal.hbaSource`), a
+  comma-separated CIDR allowlist defaulting to the RFC1918 private ranges
+  instead of `host all all all all`, with auth method `scram-sha-256`. An
+  accidentally-exposed pooler rejects public-internet sources at the HBA
+  layer (defence in depth — the backend remains the auth authority).
+  pgagroal matches HBA CIDRs on octet boundaries only (no `/12`), so
+  `172.16.0.0/12` is expressed as its sixteen `/16` blocks. Set
+  `PGAGROAL_HBA_SOURCE=all` for the legacy any-source behaviour, or to your
+  CIDR if the pod network is outside RFC1918. Spec + acceptance + a
+  dockerless validation test under `specifications/hba-source-restriction/`
+  (wired into CI).
+- **`allow_unknown_users` default flipped to `false` (#48).** Now
+  configurable via `PGAGROAL_ALLOW_UNKNOWN_USERS` (`pgagroal.allowUnknownUsers`);
+  the hardened default no longer passes unknown users through to the backend.
+- **Helm `NetworkPolicy` enabled by default (#49).** A pooler fronting
+  Postgres is a high-value lateral-movement target. The policy denies
+  ingress from outside the release namespace, ships a built-in
+  same-namespace ingress allow on the pooler (and metrics) port so the
+  default render is reachable in-namespace. Egress containment is opt-in via
+  `networkPolicy.restrictEgress` (default off): declaring `policyTypes:[Egress]`
+  with a pinned DNS CIDR would break clusters whose resolver differs (EKS
+  CoreDNS is `10.100.0.10`, not `10.96.0.10`), so the portable default
+  constrains ingress only. Operators can still narrow ingress to specific
+  pod/namespace selectors. Install NOTES reflect the enabled-by-default posture.
+- **pgexporter metrics bind narrowed (#42 follow-up).** `host = *` →
+  `host = 0.0.0.0` in `pgexporter/pgexporter.conf.template`, dropping the
+  IPv6 wildcard while preserving the in-stack scrape over the loopback
+  published port.
+- **docker-compose loopback binds (#48).** The pooler (`6432`), pooler
+  metrics (`2346`), and pgexporter metrics (`5002`) publish on `127.0.0.1`
+  only, not every host interface.
+- **Pin the Debian base image by its multi-arch index digest (#50).**
+  `debian:bookworm-20260623-slim@sha256:60ea…11df` in both build stages,
+  instead of relying on the mutable dated tag alone. The pinned snapshot
+  already carries the libssl3 `deb12u2` fix (#60); the runtime
+  `apt-get upgrade` is retained as defence in depth. Matches the
+  digest-pinning posture of the arq/workbench images and satisfies Release
+  Protocol Gate D (supply chain).
+
+This release bundles upstream pgagroal **2.1.0** (unchanged). Elevarq
+packaging version is 1.4.0.
+
 ## [1.3.0] - 2026-06-26
 
 Class: feature

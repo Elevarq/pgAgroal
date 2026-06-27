@@ -1,5 +1,11 @@
 [pgexporter]
-host = *
+# Bind the metrics listener to the IPv4 wildcard rather than `*`. The scrape
+# crosses the container boundary (published port / in-network peer), so a
+# loopback bind would make the endpoint unreachable; 0.0.0.0 is the minimal
+# bind that keeps the scrape working while dropping the IPv6 wildcard.
+# Exposure is bounded at the network layer: docker-compose publishes this
+# port on 127.0.0.1 only.
+host = 0.0.0.0
 metrics = ${PGEXPORTER_METRICS_PORT}
 
 log_type = console

@@ -9,8 +9,8 @@
       },
       "DetailsDocument": {
         "Version": {
-          "VersionTitle": "1.3.0",
-          "ReleaseNotes": "pgagroal connection pooler 2.1.0, packaged as a non-root, multi-arch (linux/amd64 + linux/arm64) container with a Helm chart. Release notes: https://github.com/Elevarq/pgAgroal/releases/tag/v1.3.0"
+          "VersionTitle": "1.4.0",
+          "ReleaseNotes": "Elevarq packaging v1.4.0, bundling upstream pgagroal 2.1.0. Hardened shipped defaults: scram-sha-256 HBA source-address allowlist (no host all all all all catch-all), allow_unknown_users defaults to false, and a default-on Kubernetes NetworkPolicy. Non-root, multi-arch (linux/amd64 + linux/arm64) container with a Helm chart. Release notes: https://github.com/Elevarq/pgAgroal/releases/tag/v1.4.0"
         },
         "DeliveryOptions": [
           {
@@ -19,11 +19,11 @@
               "HelmDeliveryOptionDetails": {
                 "CompatibleServices": ["EKS"],
                 "ContainerImages": [
-                  "709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal:1.3.0"
+                  "709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal:1.4.0"
                 ],
-                "HelmChartUri": "709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart:1.3.0",
-                "Description": "Production-hardened pgagroal connection pooler for PostgreSQL, delivered as a cosign-signed Helm chart. Runs non-root (UID 1000) with all Linux capabilities dropped, a read-only root filesystem, and seccomp RuntimeDefault. Includes liveness/readiness probes, a PodDisruptionBudget, and an optional Prometheus metrics port.",
-                "UsageInstructions": "1. Authenticate Helm to the AWS Marketplace registry:\n   aws ecr get-login-password --region <region> | helm registry login --username AWS --password-stdin 709825985650.dkr.ecr.us-east-1.amazonaws.com\n\n2. Create a values file (pgagroal-values.yaml) pointing at your PostgreSQL backend:\n   postgresql:\n     host: <postgres-host>\n     port: 5432\n   credentials:\n     username: <app-user>\n     password: <app-password>   # or set credentials.existingSecret\n\n3. Install into your cluster:\n   helm install pgagroal oci://709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart --version 1.3.0 -n pgagroal --create-namespace -f pgagroal-values.yaml\n\n4. Point applications at the pgagroal Service (port 6432). Full configuration: https://github.com/Elevarq/pgAgroal",
+                "HelmChartUri": "709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart:1.4.0",
+                "Description": "Production-hardened pgagroal connection pooler for PostgreSQL, delivered as a cosign-signed Helm chart. Hardened shipped defaults: a scram-sha-256 HBA source-address allowlist (no catch-all), allow_unknown_users disabled, and a default-on NetworkPolicy. Runs non-root (UID 1000) with all Linux capabilities dropped, a read-only root filesystem, and seccomp RuntimeDefault. Includes liveness/readiness probes, a PodDisruptionBudget, and an optional Prometheus metrics port. Bundles upstream pgagroal 2.1.0.",
+                "UsageInstructions": "1. Authenticate Helm to the AWS Marketplace registry:\n   aws ecr get-login-password --region <region> | helm registry login --username AWS --password-stdin 709825985650.dkr.ecr.us-east-1.amazonaws.com\n\n2. Create a values file named pgagroal-values.yaml with the following contents (two-space indentation), pointing at your PostgreSQL backend. Credentials are required: the v1.4.0 default does not pass unknown users through to the backend.\n\n   postgresql:\n     host: <postgres-host>\n     port: 5432\n   credentials:\n     username: <app-user>\n     password: <app-password>\n\n   To use an existing Secret instead of inline credentials, set credentials.existingSecret. If your EKS pod network is outside the RFC1918 ranges (e.g. a 100.64.0.0/10 secondary CIDR), also set pgagroal.hbaSource to that CIDR.\n\n3. Install into your cluster:\n   helm install pgagroal oci://709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart --version 1.4.0 -n pgagroal --create-namespace -f pgagroal-values.yaml\n\n4. Point applications at the pgagroal Service on port 6432. A NetworkPolicy is enabled by default and admits same-namespace clients; for clients in another namespace, set networkPolicy.ingressNamespaceSelectors. Full configuration: https://elevarq.com/docs/pgagroal-container",
                 "ReleaseName": "pgagroal",
                 "Namespace": "pgagroal"
               }

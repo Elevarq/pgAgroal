@@ -15,3 +15,31 @@ Port-forward for local access:
 
 Prometheus metrics available on port {{ .Values.metrics.port }}.
 {{- end }}
+{{- if .Values.networkPolicy.enabled }}
+
+NetworkPolicy is enabled (the hardened default). Ingress from OUTSIDE this
+namespace is denied.
+{{- if .Values.networkPolicy.allowSameNamespace }}
+  Same-namespace pods may reach the pooler. Narrow further with
+  networkPolicy.ingressPodSelectors / ingressNamespaceSelectors.
+{{- else if not (or .Values.networkPolicy.ingressPodSelectors .Values.networkPolicy.ingressNamespaceSelectors) }}
+  WARNING: allowSameNamespace is false and no ingress selectors are set, so
+  NO pod can reach the pooler. Set networkPolicy.allowSameNamespace=true or
+  add the client app's labels.
+{{- end }}
+{{- if .Values.networkPolicy.restrictEgress }}
+  Egress is contained (restrictEgress=true): backend{{ if not .Values.networkPolicy.egress.backendCIDRs }} on 0.0.0.0/0 (set egress.backendCIDRs to tighten){{ end }} + DNS only. Ensure networkPolicy.egress.kubeDNS matches your
+  cluster resolver (EKS = 10.100.0.10/32) or DNS will break.
+{{- else }}
+  Egress is NOT constrained (restrictEgress=false, the portable default), so
+  DNS + backend connectivity work on any cluster. Set restrictEgress=true (with
+  the correct egress.kubeDNS) to contain egress in production.
+{{- end }}
+  If your CNI does not enforce NetworkPolicy this manifest is a no-op; the
+  Service is still reachable. Disable with networkPolicy.enabled=false.
+{{- else }}
+
+NetworkPolicy is DISABLED — any in-cluster pod can reach the pooler. The
+hardened default is enabled=true (same-namespace ingress allowed, other
+namespaces denied). Re-enable it for defence in depth.
+{{- end }}

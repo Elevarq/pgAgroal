@@ -34,6 +34,9 @@ jobs:
           scandir: .
           additional_files: entrypoint.sh pgexporter/entrypoint.sh
 
+      - name: HBA source-restriction test (#48)
+        run: bash test/validation/hba-source-test.sh
+
   helm-lint:
     name: Helm Lint
     runs-on: ubuntu-24.04
@@ -54,6 +57,9 @@ jobs:
             --set credentials.username=testuser \
             --set credentials.password=testpass \
             --set postgresql.host=pg-host
+
+      - name: Network/bind hardened-defaults test (#49)
+        run: bash test/validation/hardened-defaults-test.sh
 
   build:
     name: Build Image
