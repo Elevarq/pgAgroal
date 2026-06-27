@@ -87,6 +87,19 @@ Each hardened default and the exact knob to restore the previous behaviour:
   digest-pinning posture of the arq/workbench images and satisfies Release
   Protocol Gate D (supply chain).
 
+### Fixed
+
+- **User registration under `allow_unknown_users=false`.** The entrypoint
+  registered the supplied `PG_USERNAME`/`PG_PASSWORD` with a
+  `pgagroal-admin … user add-user` invocation that does not exist in pgagroal
+  2.x (the subcommand is `user add`) and without first creating the master
+  key, so registration silently failed. That was harmless while unknown users
+  were passed through, but with the hardened `allow_unknown_users=false`
+  default it meant a registered user could not connect. The entrypoint now
+  creates the master key and registers the user with the correct command;
+  pgagroal loads the default users file automatically. Verified by the
+  docker-restart resilience test, which now runs in PR CI as well as publish.
+
 This release bundles upstream pgagroal **2.1.0** (unchanged). Elevarq
 packaging version is 1.4.0.
 
