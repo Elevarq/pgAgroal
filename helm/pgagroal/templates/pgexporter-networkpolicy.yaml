@@ -1,0 +1,49 @@
+{{- /*
+  #46 — NetworkPolicy for the optional pgexporter component.
+
+  pgexporter exposes only the metrics port over TCP (management is over a unix
+  socket), so this policy governs metrics ingress: same-namespace scrapers by
+  default, plus any operator-listed pods/namespaces (e.g. a monitoring
+  namespace). Ingress from outside the namespace is denied unless a selector
+  admits it. No-op on CNIs that do not enforce NetworkPolicy.
+*/}}
+{{- if and .Values.pgexporter.enabled .Values.pgexporter.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pgagroal.pgexporter.fullname" . }}
+  labels:
+    {{- include "pgagroal.pgexporter.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "pgagroal.pgexporter.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    {{- if or .Values.pgexporter.networkPolicy.allowSameNamespace .Values.pgexporter.networkPolicy.ingressPodSelectors .Values.pgexporter.networkPolicy.ingressNamespaceSelectors }}
+    - from:
+        {{- if .Values.pgexporter.networkPolicy.allowSameNamespace }}
+        # Same-namespace allow: an empty podSelector matches every pod in THIS
+        # policy's namespace, so an in-namespace Prometheus can scrape while
+        # other namespaces are denied.
+        - podSelector: {}
+        {{- end }}
+        {{- range .Values.pgexporter.networkPolicy.ingressPodSelectors }}
+        - podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+        {{- range .Values.pgexporter.networkPolicy.ingressNamespaceSelectors }}
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.pgexporter.metricsPort }}
+    {{- else }}
+    # No ingress allowed: allowSameNamespace is false and no selectors are set,
+    # so nothing can scrape. Set allowSameNamespace=true or list selectors.
+    {{- end }}
+{{- end }}

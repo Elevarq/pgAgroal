@@ -243,3 +243,79 @@ observability:
     env: []
     # -- Extra volume mounts for the sidecar (e.g. shared /tmp for unix socket)
     extraVolumeMounts: []
+
+# ---------------------------------------------------------------------------
+# pgexporter (optional PostgreSQL metrics exporter — the server-metrics path)
+# ---------------------------------------------------------------------------
+# pgexporter connects DIRECTLY to PostgreSQL (never through pgagroal) with a
+# least-privilege pg_monitor role, so the pooler's own connection statistics
+# are not polluted by the exporter's scrape connections. Shipped as a SEPARATE
+# component/image (one process per container), off by default — this mirrors
+# the docker-compose integration stack.
+#
+# Enable example:
+#   pgexporter:
+#     enabled: true
+#     credentials:
+#       password: "<the pg_monitor role password>"
+#
+# Provision the monitoring role first (see postgres-init/01-pgexporter-role.sql):
+#   CREATE ROLE pgexporter WITH LOGIN PASSWORD '...'; GRANT pg_monitor TO pgexporter;
+pgexporter:
+  # -- Render the pgexporter Deployment, Service, Secret and NetworkPolicy
+  enabled: false
+  image:
+    # -- pgexporter image repository (pin to a released version; never :latest)
+    repository: pgexporter
+    # -- pgexporter image tag (pinned upstream pgexporter release)
+    tag: "0.8.0"
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+  # -- Replicas (a single exporter is normally sufficient; scrapes are
+  # idempotent reads, so there is no leader election)
+  replicaCount: 1
+  # -- Metrics port (the Prometheus scrape target)
+  metricsPort: 5002
+  # -- Log level: fatal, error, warn, info, debug1-debug5, trace
+  logLevel: info
+  # Monitoring role pgexporter authenticates to PostgreSQL with. Use a
+  # pg_monitor role, NEVER a superuser. The password is injected at runtime
+  # via a Secret and is never baked into the image.
+  credentials:
+    # -- Create a Secret from username/password below
+    create: true
+    # -- Monitoring role name
+    username: pgexporter
+    # -- Monitoring role password (required when enabled and create=true)
+    password: ""
+    # -- Use an existing Secret instead (keys: PGEXPORTER_USER, PGEXPORTER_PASSWORD)
+    existingSecret: ""
+  service:
+    # -- Service type (keep ClusterIP — the exporter is an internal scrape target)
+    type: ClusterIP
+    # -- Service port. Exposes ONLY metrics; pgexporter has no TCP management
+    # port (management uses a unix socket), so nothing else is reachable.
+    port: 5002
+  # NetworkPolicy governing who can reach the metrics port. Since pgexporter
+  # exposes no TCP management port, only metrics ingress needs governing.
+  networkPolicy:
+    # -- Render the NetworkPolicy (defence in depth; a no-op on CNIs that do
+    # not enforce NetworkPolicy)
+    enabled: true
+    # -- Allow all pods in the SAME namespace to scrape. On by default so an
+    # in-namespace Prometheus works; cross-namespace ingress is denied unless
+    # admitted by a selector below.
+    allowSameNamespace: true
+    # -- Additional pods allowed to scrape (each entry a label map)
+    ingressPodSelectors: []
+    # -- Namespaces allowed to scrape (each entry a label map matched against
+    # namespace labels) — e.g. your monitoring namespace
+    ingressNamespaceSelectors: []
+  # -- Resource requests/limits
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
