@@ -73,17 +73,23 @@ postgresql:
   port: 5432
 
 # ---------------------------------------------------------------------------
-# Credentials (stored in a Secret)
+# Credentials. The image ships NO default or hardcoded password: you supply
+# your existing PostgreSQL credentials. The chart fails to render if no
+# credential source is provided (no empty-credential default).
 # ---------------------------------------------------------------------------
 credentials:
-  # -- Create the Secret from these values
-  create: true
-  # -- PostgreSQL username
-  username: ""
-  # -- PostgreSQL password
-  password: ""
-  # -- Use an existing Secret instead (keys: PG_USERNAME, PG_PASSWORD)
+  # -- RECOMMENDED: reference an existing Kubernetes Secret with keys
+  # PG_USERNAME and PG_PASSWORD. Keeps credentials out of Helm values and
+  # release history. When set, the values below are ignored.
   existingSecret: ""
+  # -- Or have the chart create the Secret from username + password below.
+  create: true
+  # -- PostgreSQL username (required when create=true and no existingSecret).
+  username: ""
+  # -- PostgreSQL password (required when create=true and no existingSecret).
+  # There is no default; leaving this empty without an existingSecret fails
+  # the render rather than shipping a blank password.
+  password: ""
 
 # ---------------------------------------------------------------------------
 # Kubernetes Service
