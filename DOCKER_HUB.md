@@ -15,13 +15,13 @@ Production-grade container image for [pgagroal](https://github.com/pgagroal/pgag
 ## Quick start
 
 ```bash
-docker pull elevarq/pgagroal:1.4.1
+docker pull elevarq/pgagroal:1.4.2
 
 docker run -d --name pgagroal \
   -p 6432:6432 \
   -e PG_BACKEND_HOST=your-postgres-host \
   -e PG_BACKEND_PORT=5432 \
-  elevarq/pgagroal:1.4.1
+  elevarq/pgagroal:1.4.2
 
 psql -h localhost -p 6432 -U youruser -d yourdb -c 'SELECT 1;'
 ```
@@ -29,7 +29,7 @@ psql -h localhost -p 6432 -U youruser -d yourdb -c 'SELECT 1;'
 ## Verify
 
 ```bash
-cosign verify elevarq/pgagroal:1.4.1 \
+cosign verify elevarq/pgagroal:1.4.2 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```

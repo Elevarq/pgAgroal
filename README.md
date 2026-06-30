@@ -14,7 +14,7 @@ From [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams.
 
 ## Contents
 
-- Elevarq packaging v1.4.1, bundling upstream pgagroal 2.1.0
+- Elevarq packaging v1.4.2, bundling upstream pgagroal 2.1.0
 - Base image: debian:bookworm-20260623-slim (pinned by digest)
 - Architectures: amd64, arm64
 
@@ -97,7 +97,7 @@ kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
 
 # 2. Install, referencing that Secret.
 helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal \
-  --version 1.4.1 \
+  --version 1.4.2 \
   --set postgresql.host=my-postgres \
   --set credentials.create=false \
   --set credentials.existingSecret=pgagroal-pg-credentials \
@@ -113,7 +113,7 @@ The published chart is cosign-signed (keyless, GitHub OIDC) -- the same
 trust root as the container image. Verify before install:
 
 ```bash
-cosign verify ghcr.io/elevarq/charts/pgagroal:1.4.1 \
+cosign verify ghcr.io/elevarq/charts/pgagroal:1.4.2 \
   --certificate-identity-regexp='https://github.com/Elevarq/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 ```
@@ -295,14 +295,14 @@ In production, pin a version tag rather than `latest`:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "1.4.1"
+  tag: "1.4.2"
   pullPolicy: IfNotPresent
 ```
 
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.4.1 \
+cosign verify elevarq/pgagroal:1.4.2 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -345,16 +345,16 @@ or [Kyverno](https://kyverno.io/).
 
 ## Pinned Versions
 
-Elevarq packaging version **1.4.1** bundles upstream **pgagroal 2.1.0** (the
+Elevarq packaging version **1.4.2** bundles upstream **pgagroal 2.1.0** (the
 packaging version and the bundled pgagroal version move independently).
 
 | Component | Version |
 |---|---|
-| Elevarq packaging (Project) | 1.4.1 |
+| Elevarq packaging (Project) | 1.4.2 |
 | pgagroal | 2.1.0 |
 | Debian base | bookworm-20260623-slim (digest-pinned) |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 1.4.1 |
+| Helm chart | 1.4.2 |
 
 ## Related
 

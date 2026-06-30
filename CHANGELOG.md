@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-06-30
+
+Class: security
+
+Follow-up to 1.4.1 for AWS Marketplace ingestion compatibility. The bundled
+upstream pgagroal version is unchanged at 2.1.0 and the runtime image is
+functionally identical to 1.4.0/1.4.1.
+
+### Security
+
+- **Credentials default to an external Secret reference (no rendered
+  password).** The chart now defaults to
+  `credentials.existingSecret: pgagroal-pg-credentials` with `create: false`,
+  so a default `helm template` / `helm install` emits a `secretKeyRef` and
+  creates no Secret - the rendered manifests contain no credential value at
+  all. 1.4.1 made the chart fail-closed when no credential source was given,
+  but a default `helm template` (which AWS Marketplace ingestion runs) then
+  could not render. This achieves the same "no default or static password"
+  guarantee while templating cleanly: the operator creates the named Secret
+  with their existing PostgreSQL credentials before installing. An explicit
+  `create=true` with empty credentials and no `existingSecret` is still
+  rejected.
+
+This release bundles upstream pgagroal **2.1.0** (unchanged). Elevarq
+packaging version is 1.4.2.
+
 ## [1.4.1] - 2026-06-30
 
 Class: security

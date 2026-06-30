@@ -13,10 +13,10 @@ This file is the content + steps we drive via the AWS Marketplace Catalog API
 > requirement). Do **not** run the submit / visibility change-sets until legal
 > clears.
 >
-> **Harden-then-resubmit (v1.4.1).** The public listing target is now
-> **Elevarq packaging v1.4.1** (bundling upstream pgagroal 2.1.0), which ships
+> **Harden-then-resubmit (v1.4.2).** The public listing target is now
+> **Elevarq packaging v1.4.2** (bundling upstream pgagroal 2.1.0), which ships
 > hardened shipped defaults. It **supersedes** the in-review v1.3.0 — do not
-> broaden v1.3.0 to Public; re-host the 1.4.1 image + chart and add the 1.4.1
+> broaden v1.3.0 to Public; re-host the 1.4.2 image + chart and add the 1.4.2
 > delivery option, then publish that. The canonical paste-ready portal copy
 > (title, descriptions, highlights, delivery-option label, usage
 > instructions) lives in [`listing-copy.md`](listing-copy.md); keep this file
@@ -102,7 +102,7 @@ aws ecr get-login-password --region <region> \
 ```
 
 Configure a values file, then install with `-f`. Credentials are required —
-the v1.4.1 default does not pass unknown users through to the backend:
+the v1.4.2 default does not pass unknown users through to the backend:
 
 ```yaml
 # pgagroal-values.yaml
@@ -121,7 +121,7 @@ credentials:
 ```sh
 helm install pgagroal \
   oci://709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart \
-  --version 1.4.1 -n pgagroal --create-namespace -f pgagroal-values.yaml
+  --version 1.4.2 -n pgagroal --create-namespace -f pgagroal-values.yaml
 ```
 
 Applications then connect through the `pgagroal` Service on port `6432`. Full

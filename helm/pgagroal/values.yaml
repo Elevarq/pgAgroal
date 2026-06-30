@@ -74,21 +74,25 @@ postgresql:
 
 # ---------------------------------------------------------------------------
 # Credentials. The image ships NO default or hardcoded password: you supply
-# your existing PostgreSQL credentials. The chart fails to render if no
-# credential source is provided (no empty-credential default).
+# your existing PostgreSQL credentials. By DEFAULT the chart references an
+# external Kubernetes Secret and does NOT create one, so the rendered
+# manifests contain no credential value (only a secretKeyRef). Create the
+# Secret before installing (see README); the pod stays pending until it
+# exists. No blank or static password is ever shipped.
 # ---------------------------------------------------------------------------
 credentials:
-  # -- RECOMMENDED: reference an existing Kubernetes Secret with keys
+  # -- RECOMMENDED (default): name of an existing Kubernetes Secret with keys
   # PG_USERNAME and PG_PASSWORD. Keeps credentials out of Helm values and
-  # release history. When set, the values below are ignored.
-  existingSecret: ""
-  # -- Or have the chart create the Secret from username + password below.
-  create: true
+  # release history. Create it before installing.
+  existingSecret: "pgagroal-pg-credentials"
+  # -- Have the chart create the Secret from username + password below
+  # instead. To use this, set existingSecret to "" AND create=true with both
+  # username and password.
+  create: false
   # -- PostgreSQL username (required when create=true and no existingSecret).
   username: ""
   # -- PostgreSQL password (required when create=true and no existingSecret).
-  # There is no default; leaving this empty without an existingSecret fails
-  # the render rather than shipping a blank password.
+  # The chart never ships a blank or static password.
   password: ""
 
 # ---------------------------------------------------------------------------
