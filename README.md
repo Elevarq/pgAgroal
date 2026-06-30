@@ -14,7 +14,7 @@ From [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams.
 
 ## Contents
 
-- Elevarq packaging v1.4.0, bundling upstream pgagroal 2.1.0
+- Elevarq packaging v1.4.1, bundling upstream pgagroal 2.1.0
 - Base image: debian:bookworm-20260623-slim (pinned by digest)
 - Architectures: amd64, arm64
 
@@ -84,33 +84,49 @@ Each release publishes the chart as an OCI artifact to GHCR, so you can
 install by reference without a repo checkout (the chart version matches
 the release version):
 
+The image ships **no default password** — you supply your existing
+PostgreSQL credentials. The recommended path keeps them in a Kubernetes
+Secret, out of Helm values and release history:
+
 ```bash
+# 1. Create a Secret with your existing PostgreSQL credentials.
+kubectl create namespace pgagroal
+kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
+  --from-literal=PG_USERNAME=app \
+  --from-literal=PG_PASSWORD='<your-password>'
+
+# 2. Install, referencing that Secret.
 helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal \
-  --version 1.4.0 \
+  --version 1.4.1 \
   --set postgresql.host=my-postgres \
-  --set credentials.username=app \
-  --set credentials.password=secret \
-  -n pgagroal --create-namespace
+  --set credentials.create=false \
+  --set credentials.existingSecret=pgagroal-pg-credentials \
+  -n pgagroal
 ```
+
+The chart fails to render if no credential source is provided (no
+empty-password default). For local testing only, you can inline credentials
+instead with `--set credentials.username=app --set credentials.password=...`
+(this stores the password in the Helm release history -- not for production).
 
 The published chart is cosign-signed (keyless, GitHub OIDC) -- the same
 trust root as the container image. Verify before install:
 
 ```bash
-cosign verify ghcr.io/elevarq/charts/pgagroal:1.4.0 \
+cosign verify ghcr.io/elevarq/charts/pgagroal:1.4.1 \
   --certificate-identity-regexp='https://github.com/Elevarq/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 ```
 
-Or install from a working-tree checkout:
+Or install from a working-tree checkout (referencing the same Secret):
 
 ```bash
 make build
 helm install pgagroal helm/pgagroal/ \
   --set postgresql.host=my-postgres \
-  --set credentials.username=app \
-  --set credentials.password=secret \
-  -n pgagroal --create-namespace
+  --set credentials.create=false \
+  --set credentials.existingSecret=pgagroal-pg-credentials \
+  -n pgagroal
 ```
 
 #### NetworkPolicy (enabled by default)
@@ -118,16 +134,21 @@ helm install pgagroal helm/pgagroal/ \
 The pooler fronts your database and is a high-value lateral-movement
 target. The chart ships a `NetworkPolicy` that is **enabled by default**: it
 denies ingress from outside the release namespace while allowing
-same-namespace pods to reach the pooler, and constrains egress to the
-backend Postgres and DNS. The default render is therefore reachable
-in-namespace without extra configuration. Narrow it in production to the
-specific client pods/namespaces and backend CIDR:
+same-namespace pods to reach the pooler. **Egress is left unconstrained by
+default** for portability (a default-on egress policy with a pinned DNS CIDR
+breaks clusters whose resolver differs — EKS CoreDNS is `10.100.0.10`, not
+the kubeadm `10.96.0.10`). The default render is therefore reachable
+in-namespace without extra configuration. Narrow ingress in production to
+the specific client pods/namespaces, and opt into egress containment with
+`networkPolicy.restrictEgress=true`:
 
 ```bash
 helm upgrade pgagroal helm/pgagroal/ \
   --set networkPolicy.allowSameNamespace=false \
   --set 'networkPolicy.ingressPodSelectors[0].app\.kubernetes\.io/name=my-app' \
-  --set 'networkPolicy.egress.backendCIDRs[0]=10.0.5.10/32'
+  --set networkPolicy.restrictEgress=true \
+  --set 'networkPolicy.egress.backendCIDRs[0]=10.0.5.10/32' \
+  --set 'networkPolicy.egress.kubeDNS[0]=10.100.0.10/32'
 ```
 
 | Value | Default | Purpose |
@@ -136,12 +157,13 @@ helm upgrade pgagroal helm/pgagroal/ \
 | `networkPolicy.allowSameNamespace` | `true` | Allow all same-namespace pods to reach the pooler. Set `false` to admit only the selectors below. |
 | `networkPolicy.ingressPodSelectors` | `[]` | Label maps of additional pods allowed to reach the pooler. |
 | `networkPolicy.ingressNamespaceSelectors` | `[]` | Label maps of namespaces allowed, in addition to pods. |
-| `networkPolicy.egress.backendCIDRs` | `[]` | Backend Postgres CIDR(s) (e.g. an RDS `/32`). If empty, egress to the backend port is allowed to `0.0.0.0/0` (port-restricted) so the default stays functional — tighten in production. |
-| `networkPolicy.egress.kubeDNS` | `10.96.0.10/32` | Kube-DNS resolver CIDR(s). |
+| `networkPolicy.restrictEgress` | `false` | Add an egress policy (backend + DNS only). Off by default so DNS/backend work on any cluster. |
+| `networkPolicy.egress.backendCIDRs` | `[]` | (restrictEgress only) Backend Postgres CIDR(s) (e.g. an RDS `/32`). Empty => backend port on `0.0.0.0/0`. |
+| `networkPolicy.egress.kubeDNS` | `10.96.0.10/32` | (restrictEgress only) Kube-DNS resolver CIDR(s). MUST match your cluster (EKS `10.100.0.10/32`). |
 
 To disable the policy entirely (e.g. on a CNI that does not enforce it),
 set `networkPolicy.enabled=false`. The install NOTES report the effective
-posture and recommend tightening egress to a specific backend CIDR.
+posture.
 
 ## Deployment
 
@@ -273,14 +295,14 @@ In production, pin a version tag rather than `latest`:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "1.4.0"
+  tag: "1.4.1"
   pullPolicy: IfNotPresent
 ```
 
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.4.0 \
+cosign verify elevarq/pgagroal:1.4.1 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -323,16 +345,16 @@ or [Kyverno](https://kyverno.io/).
 
 ## Pinned Versions
 
-Elevarq packaging version **1.4.0** bundles upstream **pgagroal 2.1.0** (the
+Elevarq packaging version **1.4.1** bundles upstream **pgagroal 2.1.0** (the
 packaging version and the bundled pgagroal version move independently).
 
 | Component | Version |
 |---|---|
-| Elevarq packaging (Project) | 1.4.0 |
+| Elevarq packaging (Project) | 1.4.1 |
 | pgagroal | 2.1.0 |
 | Debian base | bookworm-20260623-slim (digest-pinned) |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 1.4.0 |
+| Helm chart | 1.4.1 |
 
 ## Related
 

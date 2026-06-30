@@ -66,5 +66,13 @@ check "AC-04 narrowed egress drops 0.0.0.0/0" "0" "$(printf '%s\n' "${narrowed}"
 check "AC-05 pgexporter host = 0.0.0.0" "1" "$(grep -cE '^host = 0\.0\.0\.0$' pgexporter/pgexporter.conf.template)"
 check "AC-05 pgexporter no host = *" "0" "$(grep -cE '^host = \*$' pgexporter/pgexporter.conf.template)"
 
+# Credentials are fail-closed (no default password): a render with no
+# credential source must fail; existingSecret or inline creds must render.
+# (if-guards keep `set -e` from aborting on the intentional failure.)
+if helm template t "${CHART}" --set postgresql.host=h >/dev/null 2>&1; then nocred=0; else nocred=1; fi
+check "credentials fail-closed: no source => render fails" "1" "${nocred}"
+if helm template t "${CHART}" --set credentials.create=false --set credentials.existingSecret=s --set postgresql.host=h >/dev/null 2>&1; then es=1; else es=0; fi
+check "credentials existingSecret => renders" "1" "${es}"
+
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]

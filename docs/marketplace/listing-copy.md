@@ -1,7 +1,7 @@
 # AWS Marketplace listing copy — Elevarq pgAgroal
 
 Canonical, paste-ready copy for the Elevarq pgAgroal AWS Marketplace
-container listing. Keyed to **Elevarq packaging v1.4.0, bundling upstream
+container listing. Keyed to **Elevarq packaging v1.4.1, bundling upstream
 pgagroal 2.1.0**. Tracks [#55](https://github.com/Elevarq/pgAgroal/issues/55).
 
 Heading text below is **sentence case** (only the first word and proper
@@ -77,21 +77,21 @@ EKS
 - **Delivery-option label (`DeliveryOptionTitle`): `Helm chart (Amazon EKS)`**
   — this is the correct label. If the live listing shows a placeholder or
   auto-generated delivery-option title, replace it with this.
-- **Version title (`VersionTitle`): `1.4.0`** — Elevarq packaging version;
+- **Version title (`VersionTitle`): `1.4.1`** — Elevarq packaging version;
   this version bundles upstream pgagroal 2.1.0.
 - Compatible services: EKS.
-- Image: `709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal:1.4.0`
-- Chart: `709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart:1.4.0`
+- Image: `709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal:1.4.1`
+- Chart: `709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart:1.4.1`
 
 ## Version
 
-This listing's version is **Elevarq packaging v1.4.0**, which bundles
+This listing's version is **Elevarq packaging v1.4.1**, which bundles
 **upstream pgagroal 2.1.0**. The two numbers are independent and intentionally
-different: **1.4.0** is the Elevarq packaging version (how the image is
+different: **1.4.1** is the Elevarq packaging version (how the image is
 built, hardened, and shipped); **2.1.0** is the upstream pooler release
 inside it. State the relationship wherever both appear — e.g. "Elevarq
-packaging v1.4.0, bundling upstream pgagroal 2.1.0" — so readers do not read
-1.4.0 as a pgagroal version.
+packaging v1.4.1, bundling upstream pgagroal 2.1.0" — so readers do not read
+1.4.1 as a pgagroal version.
 
 ## Usage instructions
 
@@ -103,32 +103,45 @@ packaging v1.4.0, bundling upstream pgagroal 2.1.0" — so readers do not read
          709825985650.dkr.ecr.us-east-1.amazonaws.com
    ```
 
-2. Create a values file. Save the following as `pgagroal-values.yaml` and
-   point it at your PostgreSQL backend. Credentials are required: the v1.4.0
-   default does not pass unknown users through to the backend.
+2. Create a Kubernetes Secret with your existing PostgreSQL credentials. The
+   image ships no default or hardcoded password — these are your own database
+   credentials.
+
+   ```sh
+   kubectl create namespace pgagroal
+   kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
+     --from-literal=PG_USERNAME=<app-user> \
+     --from-literal=PG_PASSWORD=<app-password>
+   ```
+
+3. Create a values file. Save the following as `pgagroal-values.yaml`,
+   pointing it at your backend and the Secret from step 2:
 
    ```yaml
    postgresql:
      host: <postgres-host>
      port: 5432
    credentials:
-     username: <app-user>
-     password: <app-password>   # or set credentials.existingSecret
+     create: false
+     existingSecret: pgagroal-pg-credentials
    # Optional: if your EKS pod network is outside the RFC1918 ranges
    # (e.g. a 100.64.0.0/10 secondary CIDR), set the HBA allowlist to it:
    # pgagroal:
    #   hbaSource: "100.64.0.0/10"
    ```
 
-3. Install into your cluster:
+   The chart fails to install if no credential source is provided (no
+   empty-password default).
+
+4. Install into your cluster:
 
    ```sh
    helm install pgagroal \
      oci://709825985650.dkr.ecr.us-east-1.amazonaws.com/elevarq/elevarq-pgagroal-chart \
-     --version 1.4.0 -n pgagroal --create-namespace -f pgagroal-values.yaml
+     --version 1.4.1 -n pgagroal --create-namespace -f pgagroal-values.yaml
    ```
 
-4. Point applications at the `pgagroal` Service on port 6432. A NetworkPolicy
+5. Point applications at the `pgagroal` Service on port 6432. A NetworkPolicy
    is enabled by default and admits same-namespace clients; if your clients
    run in another namespace, set `networkPolicy.ingressNamespaceSelectors`.
    Full configuration: https://elevarq.com/docs/pgagroal-container
@@ -150,6 +163,6 @@ Report security vulnerabilities to security@elevarq.com (see SECURITY.md).
   copy-paste YAML.
 - The catalog-API change-set carrying these values is
   [`catalog-api/02-add-helm-delivery.json`](catalog-api/02-add-helm-delivery.json)
-  (VersionTitle 1.4.0; image and chart at the `:1.4.0` Marketplace ECR tags).
-  Re-host the 1.4.0 image and chart into the Marketplace ECR before adding
+  (VersionTitle 1.4.1; image and chart at the `:1.4.1` Marketplace ECR tags).
+  Re-host the 1.4.1 image and chart into the Marketplace ECR before adding
   the delivery option (see [`catalog-api/README.md`](catalog-api/README.md)).

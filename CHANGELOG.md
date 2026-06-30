@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-06-30
+
+Class: security
+
+Chart-and-docs hardening of credential handling, in response to an AWS
+Marketplace review. The bundled upstream pgagroal version is unchanged at
+2.1.0 and the runtime image is functionally identical to 1.4.0.
+
+### Security
+
+- **Credentials are fail-closed (no default password).** The Helm chart now
+  refuses to render unless a PostgreSQL credential source is provided -
+  either `credentials.existingSecret` (recommended) or `credentials.create`
+  with `username` and `password`. Previously a credential-less install
+  produced a Secret with an empty password. The image has never contained a
+  default or hardcoded password (no baked user/admin/superuser files; the
+  internal master key is generated randomly per container instance); this
+  makes that posture explicit and enforced.
+- **Secret-first usage.** NOTES, the README, and the Marketplace usage
+  instructions lead with creating a Kubernetes Secret that holds the
+  operator's existing PostgreSQL credentials, keeping passwords out of Helm
+  values and release history.
+
+This release bundles upstream pgagroal **2.1.0** (unchanged). Elevarq
+packaging version is 1.4.1.
+
 ## [1.4.0] - 2026-06-26
 
 Class: breaking-config
