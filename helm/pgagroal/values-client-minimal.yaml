@@ -13,5 +13,4 @@ postgresql:
   host: "CHANGEME.cluster-xxxx.eu-west-1.rds.amazonaws.com"         # CHANGEME
 
 credentials:
-  create: false
   existingSecret: "pgagroal-pg-credentials"                          # CHANGEME if different

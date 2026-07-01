@@ -9,7 +9,8 @@
 #       aws ecr get-login-password | docker login --username AWS --password-stdin <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com
 #       docker tag pgagroal:2.1.0 <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/pgagroal:2.1.0
 #       docker push <ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/pgagroal:2.1.0
-#   - Create the external secret or use credentials.create with sealed-secrets
+#   - Create the external Secret (e.g. with sealed-secrets or your secret
+#     manager) and reference it via credentials.existingSecret
 
 replicaCount: 3
 
@@ -36,7 +37,6 @@ postgresql:
   port: 5432
 
 credentials:
-  create: false
   existingSecret: "pgagroal-pg-credentials"
 
 service:

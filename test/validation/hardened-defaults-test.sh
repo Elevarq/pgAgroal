@@ -67,16 +67,16 @@ check "AC-05 pgexporter host = 0.0.0.0" "1" "$(grep -cE '^host = 0\.0\.0\.0$' pg
 check "AC-05 pgexporter no host = *" "0" "$(grep -cE '^host = \*$' pgexporter/pgexporter.conf.template)"
 
 # Credentials: no default/static password. The default render references an
-# external Secret (creates none, emits no password value) and must template
-# cleanly (AWS Marketplace runs `helm template` with default values). An
-# explicit create=true with empty creds and no existingSecret is fail-closed.
+# external Secret only (creates none, emits no credential value) and must
+# template cleanly (AWS Marketplace runs `helm template` with default values).
+# An empty existingSecret is fail-closed.
 # (if-guards keep `set -e` from aborting on the intentional failure.)
 if helm template t "${CHART}" --set postgresql.host=h >/dev/null 2>&1; then dr=1; else dr=0; fi
 check "default values render cleanly (no creds args)" "1" "${dr}"
-check "default render creates no Secret (no empty-password default)" "0" "$(helm template t "${CHART}" --set postgresql.host=h 2>/dev/null | grep -c '^kind: Secret$')"
+check "default render creates no Secret" "0" "$(helm template t "${CHART}" --set postgresql.host=h 2>/dev/null | grep -c '^kind: Secret$')"
 check "default render emits no PG_PASSWORD value" "0" "$(helm template t "${CHART}" --set postgresql.host=h 2>/dev/null | grep -cE 'PG_PASSWORD: .')"
-if helm template t "${CHART}" --set credentials.existingSecret= --set credentials.create=true --set postgresql.host=h >/dev/null 2>&1; then fc=0; else fc=1; fi
-check "fail-closed: create=true, empty creds, no existingSecret => fails" "1" "${fc}"
+if helm template t "${CHART}" --set credentials.existingSecret= --set postgresql.host=h >/dev/null 2>&1; then fc=0; else fc=1; fi
+check "fail-closed: empty existingSecret => fails" "1" "${fc}"
 
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]

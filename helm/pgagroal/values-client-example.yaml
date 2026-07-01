@@ -35,7 +35,6 @@ postgresql:
 #   kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
 #     --from-literal=PG_USERNAME=<user> --from-literal=PG_PASSWORD=<pass>
 credentials:
-  create: false
   existingSecret: "pgagroal-pg-credentials"  # CHANGEME if using a different name
 
 # ---------------------------------------------------------------------------

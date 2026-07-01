@@ -61,24 +61,18 @@ ServiceAccount name.
 Secret name for PostgreSQL credentials.
 */}}
 {{- define "pgagroal.secretName" -}}
-{{- if .Values.credentials.existingSecret }}
 {{- .Values.credentials.existingSecret }}
-{{- else }}
-{{- include "pgagroal.fullname" . }}
-{{- end }}
 {{- end }}
 
 {{/*
-Fail closed when no PostgreSQL credential source is provided. The image
-ships NO default or hardcoded password: the operator must supply their
-existing PostgreSQL credentials, either via an existing Kubernetes Secret
-(recommended) or via chart values. Refuses to render an empty-credential
-default rather than silently shipping a blank password.
+Fail closed when no credential Secret is provided. The image and chart ship
+NO credential values of any kind: the operator supplies their own existing
+PostgreSQL credentials in a Kubernetes Secret referenced by
+credentials.existingSecret. The chart never creates a Secret and never
+contains a password value; it only references the operator's Secret.
 */}}
 {{- define "pgagroal.validateCredentials" -}}
 {{- if not .Values.credentials.existingSecret }}
-{{- if or (not .Values.credentials.create) (not .Values.credentials.username) (not .Values.credentials.password) }}
-{{- fail "pgagroal: PostgreSQL credentials are required - the image ships no default password. Set credentials.existingSecret to a Secret containing PG_USERNAME and PG_PASSWORD (recommended), or set credentials.create=true with credentials.username and credentials.password." }}
-{{- end }}
+{{- fail "pgagroal: set credentials.existingSecret to the name of a Kubernetes Secret containing PG_USERNAME and PG_PASSWORD. The chart contains no credential values and does not create the Secret." }}
 {{- end }}
 {{- end }}

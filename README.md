@@ -14,7 +14,7 @@ From [Elevarq](https://elevarq.com) — PostgreSQL tools for engineering teams.
 
 ## Contents
 
-- Elevarq packaging v1.4.2, bundling upstream pgagroal 2.1.0
+- Elevarq packaging v1.4.3, bundling upstream pgagroal 2.1.0
 - Base image: debian:bookworm-20260623-slim (pinned by digest)
 - Architectures: amd64, arm64
 
@@ -97,23 +97,22 @@ kubectl -n pgagroal create secret generic pgagroal-pg-credentials \
 
 # 2. Install, referencing that Secret.
 helm install pgagroal oci://ghcr.io/elevarq/charts/pgagroal \
-  --version 1.4.2 \
+  --version 1.4.3 \
   --set postgresql.host=my-postgres \
-  --set credentials.create=false \
   --set credentials.existingSecret=pgagroal-pg-credentials \
   -n pgagroal
 ```
 
-The chart fails to render if no credential source is provided (no
-empty-password default). For local testing only, you can inline credentials
-instead with `--set credentials.username=app --set credentials.password=...`
-(this stores the password in the Helm release history -- not for production).
+The chart contains no credential values and creates no Secret - it references
+the Secret you provide via `credentials.existingSecret` and renders only a
+`secretKeyRef`. The render fails closed if `credentials.existingSecret` is
+empty. Create and rotate that Secret with your own tooling.
 
 The published chart is cosign-signed (keyless, GitHub OIDC) -- the same
 trust root as the container image. Verify before install:
 
 ```bash
-cosign verify ghcr.io/elevarq/charts/pgagroal:1.4.2 \
+cosign verify ghcr.io/elevarq/charts/pgagroal:1.4.3 \
   --certificate-identity-regexp='https://github.com/Elevarq/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 ```
@@ -124,7 +123,6 @@ Or install from a working-tree checkout (referencing the same Secret):
 make build
 helm install pgagroal helm/pgagroal/ \
   --set postgresql.host=my-postgres \
-  --set credentials.create=false \
   --set credentials.existingSecret=pgagroal-pg-credentials \
   -n pgagroal
 ```
@@ -295,14 +293,14 @@ In production, pin a version tag rather than `latest`:
 ```yaml
 image:
   repository: elevarq/pgagroal
-  tag: "1.4.2"
+  tag: "1.4.3"
   pullPolicy: IfNotPresent
 ```
 
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.4.2 \
+cosign verify elevarq/pgagroal:1.4.3 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
@@ -345,16 +343,16 @@ or [Kyverno](https://kyverno.io/).
 
 ## Pinned Versions
 
-Elevarq packaging version **1.4.2** bundles upstream **pgagroal 2.1.0** (the
+Elevarq packaging version **1.4.3** bundles upstream **pgagroal 2.1.0** (the
 packaging version and the bundled pgagroal version move independently).
 
 | Component | Version |
 |---|---|
-| Elevarq packaging (Project) | 1.4.2 |
+| Elevarq packaging (Project) | 1.4.3 |
 | pgagroal | 2.1.0 |
 | Debian base | bookworm-20260623-slim (digest-pinned) |
 | PostgreSQL (compose) | 17.4-bookworm |
-| Helm chart | 1.4.2 |
+| Helm chart | 1.4.3 |
 
 ## Related
 
