@@ -73,27 +73,19 @@ postgresql:
   port: 5432
 
 # ---------------------------------------------------------------------------
-# Credentials. The image ships NO default or hardcoded password: you supply
-# your existing PostgreSQL credentials. By DEFAULT the chart references an
-# external Kubernetes Secret and does NOT create one, so the rendered
-# manifests contain no credential value (only a secretKeyRef). Create the
-# Secret before installing (see README); the pod stays pending until it
-# exists. No blank or static password is ever shipped.
+# Credentials. The chart contains no credential values and creates no Secret.
+# You reference an existing Kubernetes Secret (credentials.existingSecret)
+# that you populate with your own PostgreSQL credentials (keys PG_USERNAME and
+# PG_PASSWORD) before installing; the rendered manifests contain only a
+# secretKeyRef, and the pod stays pending until that Secret exists.
 # ---------------------------------------------------------------------------
 credentials:
-  # -- RECOMMENDED (default): name of an existing Kubernetes Secret with keys
-  # PG_USERNAME and PG_PASSWORD. Keeps credentials out of Helm values and
-  # release history. Create it before installing.
+  # -- Name of an existing Kubernetes Secret holding your PostgreSQL
+  # credentials under keys PG_USERNAME and PG_PASSWORD. You create this Secret
+  # from your own existing credentials before installing (see README). The
+  # chart contains no credential values of any kind and never creates a
+  # Secret; it only references the one you provide.
   existingSecret: "pgagroal-pg-credentials"
-  # -- Have the chart create the Secret from username + password below
-  # instead. To use this, set existingSecret to "" AND create=true with both
-  # username and password.
-  create: false
-  # -- PostgreSQL username (required when create=true and no existingSecret).
-  username: ""
-  # -- PostgreSQL password (required when create=true and no existingSecret).
-  # The chart never ships a blank or static password.
-  password: ""
 
 # ---------------------------------------------------------------------------
 # Kubernetes Service

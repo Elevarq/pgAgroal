@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-07-01
+
+Class: security
+
+Removes every credential value from the Helm chart, in response to a repeated
+AWS Marketplace static/default-password review finding. The bundled upstream
+pgagroal version is unchanged at 2.1.0 and the runtime image is functionally
+identical to 1.4.0-1.4.2.
+
+### Security
+
+- **Chart is credentials-by-reference only - no credential value anywhere.**
+  The chart no longer contains `credentials.username` / `credentials.password`
+  values or a Secret template. It references an operator-supplied Kubernetes
+  Secret via `credentials.existingSecret` (default `pgagroal-pg-credentials`)
+  and renders only a `secretKeyRef`; the default `helm template` and all
+  rendered manifests contain no credential value of any kind. The render
+  fails closed if `credentials.existingSecret` is empty.
+
+### Removed
+
+- `credentials.create`, `credentials.username`, `credentials.password`, and
+  the chart-created Secret template (`templates/secret.yaml`). Credentials are
+  provided only via `credentials.existingSecret` - create the Secret with keys
+  `PG_USERNAME` and `PG_PASSWORD` before installing. (Since 1.4.2 the default
+  was already an external Secret, so no default deployment changes.)
+
+This release bundles upstream pgagroal **2.1.0** (unchanged). Elevarq
+packaging version is 1.4.3.
+
 ## [1.4.2] - 2026-06-30
 
 Class: security
