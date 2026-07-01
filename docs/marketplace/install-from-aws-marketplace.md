@@ -19,7 +19,7 @@ repositories that hold the image and Helm chart.
 ## 2. Authenticate Helm to the Marketplace registry
 
 ```sh
-aws ecr get-login-password --region <region> \
+aws ecr get-login-password --region us-east-1 \
   | helm registry login --username AWS --password-stdin \
       709825985650.dkr.ecr.us-east-1.amazonaws.com
 ```

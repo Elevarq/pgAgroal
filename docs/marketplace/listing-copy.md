@@ -98,7 +98,7 @@ packaging v1.4.3, bundling upstream pgagroal 2.1.0" — so readers do not read
 1. Authenticate Helm to the AWS Marketplace registry:
 
    ```sh
-   aws ecr get-login-password --region <region> \
+   aws ecr get-login-password --region us-east-1 \
      | helm registry login --username AWS --password-stdin \
          709825985650.dkr.ecr.us-east-1.amazonaws.com
    ```

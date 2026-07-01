@@ -96,7 +96,7 @@ discoverability across buyer workflows. Assessed:
 
 ```sh
 # Authenticate Helm to the AWS Marketplace registry (buyer side)
-aws ecr get-login-password --region <region> \
+aws ecr get-login-password --region us-east-1 \
   | helm registry login --username AWS --password-stdin \
       709825985650.dkr.ecr.us-east-1.amazonaws.com
 ```
