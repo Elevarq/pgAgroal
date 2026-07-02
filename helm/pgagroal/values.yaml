@@ -187,6 +187,11 @@ podDisruptionBudget:
   enabled: true
   # -- Minimum available replicas during voluntary disruption
   minAvailable: 1
+  # -- How the PDB treats not-yet-healthy pods during eviction.
+  # AlwaysAllow lets unhealthy pods be evicted during disruptions so a stuck
+  # pod can never block node drains. Set to "" to omit the field (defaults to
+  # IfHealthyBudget on the API server). Requires Kubernetes >= 1.27 (GA 1.27).
+  unhealthyPodEvictionPolicy: AlwaysAllow
 
 # ---------------------------------------------------------------------------
 # Security
@@ -211,7 +216,20 @@ containerSecurityContext:
 # ---------------------------------------------------------------------------
 nodeSelector: {}
 tolerations: []
+# -- Full control over pod affinity. When set (non-empty), this takes
+# precedence over podAntiAffinity below and is used verbatim.
 affinity: {}
+
+# -- Spread replicas across nodes. With replicaCount > 1, co-locating all
+# replicas on one node defeats the availability the PDB protects. When
+# `affinity` above is empty, a default anti-affinity is rendered from this
+# block. Disable with enabled: false, or use a hard constraint with
+# type: hard (avoid on single-node clusters — it will leave replicas Pending).
+podAntiAffinity:
+  enabled: true
+  # soft = preferredDuringScheduling (best-effort); hard = requiredDuringScheduling
+  type: soft
+  topologyKey: kubernetes.io/hostname
 
 # ---------------------------------------------------------------------------
 # Metrics (Prometheus)

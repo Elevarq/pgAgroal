@@ -58,6 +58,19 @@ jobs:
             --set credentials.password=testpass \
             --set postgresql.host=pg-host
 
+      - name: Render chart for kube-linter
+        run: |
+          mkdir -p rendered-chart
+          helm template test-release helm/pgagroal/ \
+            --set credentials.username=testuser \
+            --set credentials.password=testpass \
+            --set postgresql.host=pg-host > rendered-chart/manifests.yaml
+
+      - name: Lint rendered manifests with kube-linter
+        uses: stackrox/kube-linter-action@v1.0.7
+        with:
+          directory: rendered-chart
+
       - name: Network/bind hardened-defaults test (#49)
         run: bash test/validation/hardened-defaults-test.sh
 
