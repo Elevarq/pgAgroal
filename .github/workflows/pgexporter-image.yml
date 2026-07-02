@@ -1,0 +1,122 @@
+---
+name: Publish pgexporter image
+
+# pgexporter is an independent upstream component (agroal), versioned separately
+# from pgagroal. It is published on its own tag (`pgexporter-v<version>`) or by
+# manual dispatch, NOT on pgagroal's `v*` release tags. The published, signed
+# image backs the optional pgexporter Helm component (see #46 / #77).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'pgexporter upstream version to build (PGEXPORTER_VERSION)'
+        required: true
+        default: '0.8.0'
+  push:
+    tags:
+      - 'pgexporter-v*'
+
+permissions:
+  contents: read
+  id-token: write   # OIDC token for Sigstore (cosign) signing
+  packages: write   # push image to GHCR (ghcr.io/elevarq/pgexporter)
+
+jobs:
+  build-scan-publish:
+    name: Build, scan, sign, publish
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve pgexporter version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            v="${{ github.event.inputs.version }}"
+          else
+            v="${GITHUB_REF_NAME#pgexporter-v}"
+          fi
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+          echo "Building pgexporter ${v}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Gate C — build a single-arch image and scan it BEFORE publishing.
+      - name: Build image for scanning
+        uses: docker/build-push-action@v7
+        with:
+          context: ./pgexporter
+          build-args: |
+            PGEXPORTER_VERSION=${{ steps.ver.outputs.version }}
+          load: true
+          tags: pgexporter:scan
+          cache-from: type=gha
+
+      - name: Trivy image scan (fail on CRITICAL/HIGH)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: pgexporter:scan
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ghcr.io/elevarq/pgexporter
+            elevarq/pgexporter
+          # Pin to the exact upstream version only (never :latest for a
+          # chart-referenced component image).
+          tags: |
+            type=raw,value=${{ steps.ver.outputs.version }}
+
+      # Gate D + E — multi-arch build, push, SBOM + provenance, sign.
+      - name: Build and push (multi-arch)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ./pgexporter
+          build-args: |
+            PGEXPORTER_VERSION=${{ steps.ver.outputs.version }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign published images
+        run: |
+          digest="${{ steps.build.outputs.digest }}"
+          tags="${{ steps.meta.outputs.tags }}"
+          echo "$tags" | while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            echo "Signing ${tag}@${digest}"
+            cosign sign --yes "${tag}@${digest}"
+          done
