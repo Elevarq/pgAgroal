@@ -284,7 +284,7 @@ pgexporter:
   enabled: false
   image:
     # -- pgexporter image repository (pin to a released version; never :latest)
-    repository: pgexporter
+    repository: ghcr.io/elevarq/pgexporter
     # -- pgexporter image tag (pinned upstream pgexporter release)
     tag: "0.8.0"
     # -- Image pull policy
