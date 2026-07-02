@@ -78,7 +78,6 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
         liburing2 \
         libatomic1 \
         gettext-base \
-        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy compiled binaries and library
