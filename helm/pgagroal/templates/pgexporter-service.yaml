@@ -1,0 +1,19 @@
+{{- if .Values.pgexporter.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pgagroal.pgexporter.fullname" . }}
+  labels:
+    {{- include "pgagroal.pgexporter.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.pgexporter.service.type }}
+  # Exposes ONLY metrics. pgexporter has no TCP management port (management is
+  # over a unix socket), so nothing else is reachable via the Service.
+  ports:
+    - name: metrics
+      port: {{ .Values.pgexporter.service.port }}
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "pgagroal.pgexporter.selectorLabels" . | nindent 4 }}
+{{- end }}

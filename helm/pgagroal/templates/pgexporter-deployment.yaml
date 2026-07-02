@@ -1,0 +1,127 @@
+{{- /*
+  #46 — optional pgexporter component.
+
+  pgexporter is the server-metrics path: it connects DIRECTLY to PostgreSQL
+  (never through pgagroal) with a least-privilege pg_monitor role so the
+  pooler's own statistics are not polluted by scrape connections. Shipped as a
+  separate image (one process per container), gated on pgexporter.enabled.
+
+  readOnlyRootFilesystem is kept on (shared containerSecurityContext): the
+  image ships its config template under /etc/pgexporter, which an init
+  container seeds into a writable emptyDir so the entrypoint can render the
+  conf + users file at runtime. /home/pgexporter (master key) and /tmp (unix
+  socket) are writable emptyDirs too.
+*/}}
+{{- if .Values.pgexporter.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pgagroal.pgexporter.fullname" . }}
+  labels:
+    {{- include "pgagroal.pgexporter.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.pgexporter.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pgagroal.pgexporter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "pgagroal.pgexporter.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "pgagroal.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: seed-config
+          image: "{{ .Values.pgexporter.image.repository }}:{{ .Values.pgexporter.image.tag }}"
+          imagePullPolicy: {{ .Values.pgexporter.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["sh", "-c", "cp -R /etc/pgexporter/. /seed/"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          volumeMounts:
+            - name: config
+              mountPath: /seed
+      containers:
+        - name: pgexporter
+          image: "{{ .Values.pgexporter.image.repository }}:{{ .Values.pgexporter.image.tag }}"
+          imagePullPolicy: {{ .Values.pgexporter.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.pgexporter.metricsPort }}
+              protocol: TCP
+          env:
+            - name: PG_BACKEND_HOST
+              value: {{ .Values.postgresql.host | quote }}
+            - name: PG_BACKEND_PORT
+              value: {{ .Values.postgresql.port | quote }}
+            - name: PGEXPORTER_METRICS_PORT
+              value: {{ .Values.pgexporter.metricsPort | quote }}
+            - name: PGEXPORTER_LOG_LEVEL
+              value: {{ .Values.pgexporter.logLevel | quote }}
+            - name: PGEXPORTER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgagroal.pgexporter.secretName" . }}
+                  key: PGEXPORTER_USER
+            - name: PGEXPORTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "pgagroal.pgexporter.secretName" . }}
+                  key: PGEXPORTER_PASSWORD
+          livenessProbe:
+            exec:
+              command: ["pgexporter-cli", "-c", "/etc/pgexporter/pgexporter.conf", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["pgexporter-cli", "-c", "/etc/pgexporter/pgexporter.conf", "ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 2
+          resources:
+            {{- toYaml .Values.pgexporter.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/pgexporter
+            - name: home
+              mountPath: /home/pgexporter
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

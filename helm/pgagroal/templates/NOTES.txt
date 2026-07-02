@@ -15,6 +15,16 @@ Port-forward for local access:
 
 Prometheus metrics available on port {{ .Values.metrics.port }}.
 {{- end }}
+{{- if .Values.pgexporter.enabled }}
+
+pgexporter (server-metrics) is enabled. Scrape PostgreSQL metrics at:
+
+  {{ include "pgagroal.pgexporter.fullname" . }}:{{ .Values.pgexporter.service.port }}/metrics
+
+It connects directly to {{ .Values.postgresql.host }}:{{ .Values.postgresql.port }} as the
+"{{ .Values.pgexporter.credentials.username }}" role. Provision that role with pg_monitor (never a
+superuser); see postgres-init/01-pgexporter-role.sql.
+{{- end }}
 {{- if .Values.networkPolicy.enabled }}
 
 NetworkPolicy is enabled (the hardened default). Ingress from OUTSIDE this

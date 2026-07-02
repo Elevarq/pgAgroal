@@ -163,6 +163,43 @@ To disable the policy entirely (e.g. on a CNI that does not enforce it),
 set `networkPolicy.enabled=false`. The install NOTES report the effective
 posture.
 
+#### Server metrics (pgexporter, optional)
+
+The chart can deploy [pgexporter](https://github.com/pgexporter/pgexporter)
+as a separate, optional component for PostgreSQL **server** metrics
+(connection counts, transactions, replication, etc.) — distinct from
+pgagroal's own **pooler** metrics (`metrics.enabled`). It is off by default
+and, like the compose stack, connects **directly to PostgreSQL** with a
+least-privilege `pg_monitor` role, never through the pooler.
+
+First provision the monitoring role (see
+`postgres-init/01-pgexporter-role.sql`):
+
+```sql
+CREATE ROLE pgexporter WITH LOGIN PASSWORD '<password>';
+GRANT pg_monitor TO pgexporter;
+```
+
+Then enable it:
+
+```bash
+helm upgrade pgagroal helm/pgagroal/ \
+  --set pgexporter.enabled=true \
+  --set pgexporter.credentials.password='<password>'
+```
+
+Scrape `<release>-pgagroal-pgexporter:5002/metrics`. The component ships a
+hardened pod (non-root, read-only root filesystem, dropped capabilities), a
+`ClusterIP` Service exposing **only** the metrics port (pgexporter has no TCP
+management port), and a `NetworkPolicy` restricting who can scrape.
+
+| Value | Default | Purpose |
+|---|---|---|
+| `pgexporter.enabled` | `false` | Render the pgexporter Deployment, Service, Secret and NetworkPolicy. |
+| `pgexporter.image.tag` | `0.8.0` | Pinned pgexporter release (never `:latest`). |
+| `pgexporter.credentials.password` | `""` | `pg_monitor` role password (required when enabled). Or set `pgexporter.credentials.existingSecret`. |
+| `pgexporter.networkPolicy.allowSameNamespace` | `true` | Allow in-namespace scrapers; admit others via `ingressPodSelectors` / `ingressNamespaceSelectors`. |
+
 ## Deployment
 
 | Guide | Description |

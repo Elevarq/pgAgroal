@@ -76,3 +76,34 @@ contains a password value; it only references the operator's Secret.
 {{- fail "pgagroal: set credentials.existingSecret to the name of a Kubernetes Secret containing PG_USERNAME and PG_PASSWORD. The chart contains no credential values and does not create the Secret." }}
 {{- end }}
 {{- end }}
+
+{{/*
+pgexporter (optional metrics-exporter component) names and labels.
+*/}}
+{{- define "pgagroal.pgexporter.fullname" -}}
+{{- printf "%s-pgexporter" (include "pgagroal.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "pgagroal.pgexporter.selectorLabels" -}}
+app.kubernetes.io/name: {{ printf "%s-pgexporter" (include "pgagroal.name" .) }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: metrics-exporter
+{{- end }}
+
+{{- define "pgagroal.pgexporter.labels" -}}
+helm.sh/chart: {{ include "pgagroal.chart" . }}
+{{ include "pgagroal.pgexporter.selectorLabels" . }}
+app.kubernetes.io/version: {{ .Values.pgexporter.image.tag | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Secret name for the pgexporter monitoring-role credentials.
+*/}}
+{{- define "pgagroal.pgexporter.secretName" -}}
+{{- if .Values.pgexporter.credentials.existingSecret }}
+{{- .Values.pgexporter.credentials.existingSecret }}
+{{- else }}
+{{- include "pgagroal.pgexporter.fullname" . }}
+{{- end }}
+{{- end }}
