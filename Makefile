@@ -16,7 +16,16 @@ build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
 ## run       : Start the full stack (postgres + pgagroal)
+# Compose interpolates credentials from the environment fail-fast (no
+# committed defaults — see .env.example). First run generates an
+# ephemeral .env so local development keeps working out of the box.
 run: build
+	@if [ ! -f .env ]; then \
+		umask 177; \
+		{ echo "POSTGRES_PASSWORD=$$(openssl rand -hex 16)"; \
+		  echo "PGEXPORTER_PASSWORD=$$(openssl rand -hex 16)"; } > .env; \
+		echo "Generated .env with ephemeral credentials (see .env.example)"; \
+	fi
 	$(COMPOSE) up -d postgres pgagroal
 	@echo "pgagroal listening on localhost:6432"
 
@@ -86,8 +95,6 @@ helm-lint:
 ## helm-template : Render templates locally (dry-run)
 helm-template:
 	helm template $(HELM_RELEASE) $(HELM_CHART) \
-		--set credentials.username=testuser \
-		--set credentials.password=testpass \
 		--set postgresql.host=pg-host
 
 ## helm-install : Install the chart into the current cluster

@@ -13,6 +13,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+# shellcheck disable=SC1091
+. test/lib/test-env.sh
+
 CONTAINER_NAME="pgagroal-startup-failure-test"
 NETWORK_NAME="pgagroal-startup-test-net"
 
@@ -75,7 +79,7 @@ echo "--- Step 6: Verify client connection fails cleanly (not hangs) ---"
 set +e
 client_output=$(docker run --rm \
     --network "${NETWORK_NAME}" \
-    -e PGPASSWORD=testpass \
+    -e PGPASSWORD="${POSTGRES_PASSWORD}" \
     -e PGCONNECT_TIMEOUT=5 \
     postgres:17.4-bookworm \
     psql -h "${CONTAINER_NAME}" -p 6432 -U testuser -d testdb \

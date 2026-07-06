@@ -37,10 +37,15 @@ A ready-to-deploy packaging of pgagroal that builds from source, runs as a non-r
 ### Docker
 
 ```bash
-make run
-psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
+make run   # first run generates .env with ephemeral credentials (see .env.example)
+PGPASSWORD="$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2)" \
+  psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
 make stop
 ```
+
+There are no default or committed credentials: compose interpolates
+`POSTGRES_PASSWORD` / `PGEXPORTER_PASSWORD` from the environment (or
+`.env`) and fails fast when they are unset.
 
 ### Integration stack (pgagroal + pgexporter)
 
@@ -52,9 +57,13 @@ single-component containers live upstream; this repository wires them
 together with hardened defaults.
 
 ```bash
+# First time: provide credentials (never committed; see .env.example):
+printf 'POSTGRES_PASSWORD=%s\nPGEXPORTER_PASSWORD=%s\n' \
+  "$(openssl rand -hex 16)" "$(openssl rand -hex 16)" > .env
 docker compose up -d --build
 # Pooled client traffic (data path):
-psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
+PGPASSWORD="$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2)" \
+  psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
 # PostgreSQL server metrics (pgexporter, direct to the backend):
 curl -s http://localhost:5002/metrics | grep '^pgexporter_pg_' | head
 # Pooler metrics (pgagroal native endpoint):
@@ -74,7 +83,8 @@ metrics source per layer:
 pgexporter connects **directly to PostgreSQL**, never through pgagroal,
 so the pooler's statistics are not polluted by scrape traffic, and it
 authenticates with a least-privilege `pg_monitor` role (created by
-`postgres-init/01-pgexporter-role.sql`). See
+`postgres-init/01-pgexporter-role.sh`, which reads the role password
+from the runtime environment). See
 `specifications/compose-pgexporter-integration/` for the full
 specification.
 
@@ -173,19 +183,29 @@ and, like the compose stack, connects **directly to PostgreSQL** with a
 least-privilege `pg_monitor` role, never through the pooler.
 
 First provision the monitoring role (see
-`postgres-init/01-pgexporter-role.sql`):
+`postgres-init/01-pgexporter-role.sh`, which does this for the compose
+stack from the runtime environment):
 
 ```sql
 CREATE ROLE pgexporter WITH LOGIN PASSWORD '<password>';
 GRANT pg_monitor TO pgexporter;
 ```
 
+Create a Kubernetes Secret with those credentials — like the pooler
+credentials, the chart ships no credential values and never creates the
+Secret; it only references yours:
+
+```bash
+kubectl create secret generic pgagroal-pgexporter-credentials \
+  --from-literal=PGEXPORTER_USER=pgexporter \
+  --from-literal=PGEXPORTER_PASSWORD='<password>'
+```
+
 Then enable it:
 
 ```bash
 helm upgrade pgagroal helm/pgagroal/ \
-  --set pgexporter.enabled=true \
-  --set pgexporter.credentials.password='<password>'
+  --set pgexporter.enabled=true
 ```
 
 Scrape `<release>-pgagroal-pgexporter:5002/metrics`. The component ships a
@@ -195,9 +215,9 @@ management port), and a `NetworkPolicy` restricting who can scrape.
 
 | Value | Default | Purpose |
 |---|---|---|
-| `pgexporter.enabled` | `false` | Render the pgexporter Deployment, Service, Secret and NetworkPolicy. |
+| `pgexporter.enabled` | `false` | Render the pgexporter Deployment, Service and NetworkPolicy. |
 | `pgexporter.image.tag` | `0.8.0` | Pinned pgexporter release (never `:latest`). |
-| `pgexporter.credentials.password` | `""` | `pg_monitor` role password (required when enabled). Or set `pgexporter.credentials.existingSecret`. |
+| `pgexporter.credentials.existingSecret` | `pgagroal-pgexporter-credentials` | Name of the Secret you provide (keys `PGEXPORTER_USER`, `PGEXPORTER_PASSWORD`). The chart contains no credential values and never creates a Secret. |
 | `pgexporter.networkPolicy.allowSameNamespace` | `true` | Allow in-namespace scrapers; admit others via `ingressPodSelectors` / `ingressNamespaceSelectors`. |
 
 ## Deployment
