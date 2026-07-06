@@ -3,11 +3,19 @@ services:
     image: postgres:17.4-bookworm
     environment:
       POSTGRES_USER: testuser
-      POSTGRES_PASSWORD: testpass
+      # Credentials are interpolated from the host environment at runtime and
+      # fail fast when unset — no default or committed value (spec:
+      # compose-pgexporter-integration R2/B8). See .env.example; tests
+      # generate ephemeral values via test/lib/test-env.sh.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see .env.example}
       POSTGRES_DB: testdb
+      # Consumed by postgres-init/01-pgexporter-role.sh to create the
+      # pg_monitor role at first initialization.
+      PGEXPORTER_PASSWORD: ${PGEXPORTER_PASSWORD:?PGEXPORTER_PASSWORD is required - see .env.example}
     volumes:
       - pg_data:/var/lib/postgresql/data
-      # Creates the least-privilege pgexporter monitoring role (pg_monitor).
+      # Creates the least-privilege pgexporter monitoring role (pg_monitor);
+      # the role password is read from PGEXPORTER_PASSWORD at init time.
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
@@ -65,7 +73,7 @@ services:
       PG_BACKEND_HOST: postgres
       PG_BACKEND_PORT: "5432"
       PGEXPORTER_USER: pgexporter
-      PGEXPORTER_PASSWORD: pgexporter
+      PGEXPORTER_PASSWORD: ${PGEXPORTER_PASSWORD:?PGEXPORTER_PASSWORD is required - see .env.example}
       PGEXPORTER_METRICS_PORT: "5002"
       PGEXPORTER_LOG_LEVEL: info
     ports:
@@ -79,7 +87,7 @@ services:
       pgagroal:
         condition: service_healthy
     environment:
-      PGPASSWORD: testpass
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see .env.example}
     command:
       - sh
       - -c

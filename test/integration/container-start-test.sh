@@ -7,6 +7,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 TIMEOUT=120   # seconds to wait for healthy services
 
@@ -37,7 +40,7 @@ done
 echo "pgagroal is healthy after ${elapsed}s"
 
 echo "=== Step 4: Test PostgreSQL connection through pgagroal ==="
-${COMPOSE} run --rm -e PGPASSWORD=testpass test-client \
+${COMPOSE} run --rm -e PGPASSWORD="${POSTGRES_PASSWORD}" test-client \
     psql -h pgagroal -p 6432 -U testuser -d testdb -c "SELECT 1 AS connection_ok;"
 
 echo ""

@@ -23,6 +23,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 IMAGE="pgagroal:test"
 NET="pgagroal-restart-net"
 PG="pgagroal-restart-pg"
@@ -58,7 +61,7 @@ wait_healthy() {
 
 run_query() {
     docker run --rm --network "${NET}" \
-        -e PGPASSWORD=testpass \
+        -e PGPASSWORD="${POSTGRES_PASSWORD}" \
         postgres:17.4-bookworm \
         psql -h "${POOLER}" -p "${PGAGROAL_PORT}" \
              -U testuser -d testdb -tA \
@@ -76,7 +79,7 @@ docker network create "${NET}" >/dev/null
 echo "--- Step 3: Start postgres ---"
 docker run -d --name "${PG}" --network "${NET}" \
     -e POSTGRES_USER=testuser \
-    -e POSTGRES_PASSWORD=testpass \
+    -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
     -e POSTGRES_DB=testdb \
     postgres:17.4-bookworm >/dev/null
 
@@ -101,7 +104,7 @@ docker run -d --name "${POOLER}" --network "${NET}" \
     -e PG_BACKEND_PORT=5432 \
     -e PGAGROAL_PORT="${PGAGROAL_PORT}" \
     -e PG_USERNAME=testuser \
-    -e PG_PASSWORD=testpass \
+    -e PG_PASSWORD="${POSTGRES_PASSWORD}" \
     "${IMAGE}" >/dev/null
 
 wait_healthy "${POOLER}" "${HEALTHY_TIMEOUT}"

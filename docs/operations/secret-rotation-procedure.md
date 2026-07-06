@@ -17,25 +17,26 @@ use the new one.
 
 ## Docker Compose
 
+The compose file carries no credential values: it interpolates
+`POSTGRES_PASSWORD` / `PGEXPORTER_PASSWORD` from the environment or the
+local `.env` file (gitignored; see `.env.example`).
+
 1. Change the password in PostgreSQL:
 
 ```sql
-ALTER USER testuser WITH PASSWORD 'newpassword';
+ALTER USER testuser WITH PASSWORD '<new-password>';
 ```
 
-2. Update `docker-compose.yml` environment variables:
+2. Update the value in `.env` (or the exported variable) — never in a
+   tracked file:
 
-```yaml
-environment:
-  POSTGRES_PASSWORD: newpassword  # postgres service
+```bash
+# .env
+POSTGRES_PASSWORD=<new-password>
 ```
 
-```yaml
-environment:
-  PGPASSWORD: newpassword          # test-client
-```
-
-3. If PG_USERNAME/PG_PASSWORD are set on the pgagroal service, update them and restart:
+3. If PG_USERNAME/PG_PASSWORD are set on the pgagroal service, restart it
+   to pick up the new value:
 
 ```bash
 docker compose up -d pgagroal     # recreates with new env
@@ -44,7 +45,7 @@ docker compose up -d pgagroal     # recreates with new env
 4. Verify:
 
 ```bash
-PGPASSWORD=newpassword psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
+PGPASSWORD='<new-password>' psql -h localhost -p 6432 -U testuser -d testdb -c 'SELECT 1;'
 ```
 
 ## Kubernetes / Helm
@@ -56,7 +57,7 @@ Existing pooled connections continue using the old credentials until they expire
 1. Rotate the password in PostgreSQL / RDS:
 
 ```sql
-ALTER USER app_user WITH PASSWORD 'newpassword';
+ALTER USER app_user WITH PASSWORD '<new-password>';
 ```
 
 2. Update the Kubernetes Secret:
@@ -64,7 +65,7 @@ ALTER USER app_user WITH PASSWORD 'newpassword';
 ```bash
 kubectl create secret generic pgagroal-pg-credentials \
   --from-literal=PG_USERNAME=app_user \
-  --from-literal=PG_PASSWORD='newpassword' \
+  --from-literal=PG_PASSWORD='<new-password>' \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
@@ -78,7 +79,7 @@ kubectl rollout restart deployment pgagroal -n pgagroal
 
 ```bash
 kubectl -n pgagroal port-forward svc/pgagroal 6432:6432 &
-PGPASSWORD=newpassword psql -h 127.0.0.1 -p 6432 -U app_user -d mydb -c 'SELECT 1;'
+PGPASSWORD='<new-password>' psql -h 127.0.0.1 -p 6432 -U app_user -d mydb -c 'SELECT 1;'
 ```
 
 ### With External Secrets Operator
@@ -108,7 +109,7 @@ If the new password is wrong and connections start failing:
 
 1. Revert the PostgreSQL password:
    ```sql
-   ALTER USER app_user WITH PASSWORD 'oldpassword';
+   ALTER USER app_user WITH PASSWORD '<old-password>';
    ```
 2. Revert the Kubernetes Secret
 3. Restart pods if PG_USERNAME/PG_PASSWORD are in use

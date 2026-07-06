@@ -92,3 +92,16 @@ endpoint on port 2346
 - The pgagroal metrics endpoint is a distinct port from the pooler port
   (2346 vs 6432), confirming the metrics path does not sit in the client
   data path
+
+## AC-07: Missing credential variable fails fast (invalid)
+
+**Spec refs**: B8, R2, I2
+
+**Given**: a shell in which `POSTGRES_PASSWORD` and/or
+`PGEXPORTER_PASSWORD` are unset, and no `.env` file provides them
+**When**: any `docker compose` command that resolves the configuration
+is run (e.g. `docker compose config`)
+**Then**:
+- The command exits non-zero before any service starts
+- The error output names the missing variable
+- No service is started with an empty or default credential

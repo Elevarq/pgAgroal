@@ -271,16 +271,15 @@ observability:
 # component/image (one process per container), off by default — this mirrors
 # the docker-compose integration stack.
 #
-# Enable example:
+# Enable example (create the credentials Secret first — see
+# pgexporter.credentials.existingSecret below):
 #   pgexporter:
 #     enabled: true
-#     credentials:
-#       password: "<the pg_monitor role password>"
 #
-# Provision the monitoring role first (see postgres-init/01-pgexporter-role.sql):
-#   CREATE ROLE pgexporter WITH LOGIN PASSWORD '...'; GRANT pg_monitor TO pgexporter;
+# Provision the monitoring role first (see postgres-init/01-pgexporter-role.sh):
+#   CREATE ROLE pgexporter WITH LOGIN PASSWORD '<password>'; GRANT pg_monitor TO pgexporter;
 pgexporter:
-  # -- Render the pgexporter Deployment, Service, Secret and NetworkPolicy
+  # -- Render the pgexporter Deployment, Service and NetworkPolicy
   enabled: false
   image:
     # -- pgexporter image repository (pin to a released version; never :latest)
@@ -297,17 +296,14 @@ pgexporter:
   # -- Log level: fatal, error, warn, info, debug1-debug5, trace
   logLevel: info
   # Monitoring role pgexporter authenticates to PostgreSQL with. Use a
-  # pg_monitor role, NEVER a superuser. The password is injected at runtime
-  # via a Secret and is never baked into the image.
+  # pg_monitor role, NEVER a superuser.
   credentials:
-    # -- Create a Secret from username/password below
-    create: true
-    # -- Monitoring role name
-    username: pgexporter
-    # -- Monitoring role password (required when enabled and create=true)
-    password: ""
-    # -- Use an existing Secret instead (keys: PGEXPORTER_USER, PGEXPORTER_PASSWORD)
-    existingSecret: ""
+    # -- Name of an existing Kubernetes Secret holding the monitoring-role
+    # credentials under keys PGEXPORTER_USER and PGEXPORTER_PASSWORD. You
+    # create this Secret from your own credentials before enabling the
+    # exporter (see README). The chart contains no credential values of any
+    # kind and never creates a Secret; it only references the one you provide.
+    existingSecret: "pgagroal-pgexporter-credentials"
   service:
     # -- Service type (keep ClusterIP — the exporter is an internal scrape target)
     type: ClusterIP

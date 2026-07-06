@@ -21,9 +21,11 @@ pgexporter (server-metrics) is enabled. Scrape PostgreSQL metrics at:
 
   {{ include "pgagroal.pgexporter.fullname" . }}:{{ .Values.pgexporter.service.port }}/metrics
 
-It connects directly to {{ .Values.postgresql.host }}:{{ .Values.postgresql.port }} as the
-"{{ .Values.pgexporter.credentials.username }}" role. Provision that role with pg_monitor (never a
-superuser); see postgres-init/01-pgexporter-role.sql.
+It connects directly to {{ .Values.postgresql.host }}:{{ .Values.postgresql.port }} using the
+credentials from the "{{ include "pgagroal.pgexporter.secretName" . }}" Secret (keys
+PGEXPORTER_USER, PGEXPORTER_PASSWORD), which you provide — the chart ships no
+credential values. Provision that role with pg_monitor (never a superuser);
+see postgres-init/01-pgexporter-role.sh.
 {{- end }}
 {{- if .Values.networkPolicy.enabled }}
 

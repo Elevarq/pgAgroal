@@ -11,6 +11,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 TIMEOUT=120
 PGEXPORTER_METRICS_PORT="${PGEXPORTER_METRICS_PORT:-5002}"
@@ -78,7 +81,7 @@ wait_healthy pgexporter
 
 # --- AC-02: pooled query through pgagroal ----------------------------------
 echo "--- AC-02: pooled SELECT 1 via pgagroal:6432 ---"
-${COMPOSE} run --rm -e PGPASSWORD=testpass test-client \
+${COMPOSE} run --rm -e PGPASSWORD="${POSTGRES_PASSWORD}" test-client \
     psql -h pgagroal -p 6432 -U testuser -d testdb -c "SELECT 1 AS connection_ok;"
 
 # Poll a /metrics endpoint until a series matching the pattern appears.

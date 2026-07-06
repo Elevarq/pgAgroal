@@ -12,7 +12,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${REPO_ROOT}"
 
 CHART="helm/pgagroal"
-COMMON=(--set credentials.username=u --set credentials.password=p --set postgresql.host=h)
+COMMON=(--set postgresql.host=h)
 
 pass=0
 fail=0

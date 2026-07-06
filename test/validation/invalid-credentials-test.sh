@@ -12,6 +12,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 TIMEOUT=120
 
@@ -76,7 +79,7 @@ fi
 echo "--- Step 5: Attempt connection with non-existent user ---"
 set +e
 ${COMPOSE} run --rm \
-    -e PGPASSWORD=testpass \
+    -e PGPASSWORD="${POSTGRES_PASSWORD}" \
     test-client \
     psql -h pgagroal -p 6432 -U no_such_user_xyz -d testdb \
          -c "SELECT 1;" >/dev/null 2>&1
@@ -102,7 +105,7 @@ fi
 echo "--- Step 7: Verify correct credentials still work ---"
 set +e
 good_output=$(${COMPOSE} run --rm \
-    -e PGPASSWORD=testpass \
+    -e PGPASSWORD="${POSTGRES_PASSWORD}" \
     test-client \
     psql -h pgagroal -p 6432 -U testuser -d testdb \
          -tA -c "SELECT 'ok';" 2>&1)

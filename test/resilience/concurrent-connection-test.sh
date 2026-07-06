@@ -10,6 +10,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 TIMEOUT=120
 CONCURRENCY="${1:-20}"      # number of parallel connections
@@ -85,7 +88,7 @@ INNER
 )
 
 output=$(${COMPOSE} run --rm \
-    -e PGPASSWORD=testpass \
+    -e PGPASSWORD="${POSTGRES_PASSWORD}" \
     test-client \
     sh -c "${INNER_SCRIPT}" -- "${CONCURRENCY}" "${QUERY_SLEEP}" 2>&1)
 

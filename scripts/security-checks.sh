@@ -22,8 +22,6 @@ require_cmd() {
 render_chart() {
   local output="$1"
   helm template pgagroal helm/pgagroal \
-    --set credentials.username=testuser \
-    --set credentials.password=testpass \
     --set postgresql.host=pg-host > "$output"
 }
 
@@ -34,6 +32,12 @@ run_secrets() {
   step "gitleaks detect current commit"
   gitleaks detect --source . --redact --no-banner --log-opts="-1"
   ok "secrets"
+}
+
+run_credentials() {
+  step "no-static-credentials scan (spec: no-static-credentials)"
+  bash test/validation/no-static-credentials-test.sh
+  ok "credentials"
 }
 
 run_static() {
@@ -83,6 +87,7 @@ run_artifact_vulns() {
 
 run_all() {
   run_secrets
+  run_credentials
   run_static
   run_helm
   run_policy
@@ -92,6 +97,7 @@ run_all() {
 
 case "${1:-all}" in
   secrets) run_secrets ;;
+  credentials) run_credentials ;;
   static) run_static ;;
   helm) run_helm ;;
   policy) run_policy ;;
@@ -99,7 +105,7 @@ case "${1:-all}" in
   artifact-vulns) run_artifact_vulns ;;
   all) run_all ;;
   *)
-    printf 'usage: %s [secrets|static|helm|policy|sbom|artifact-vulns|all]\n' "$0" >&2
+    printf 'usage: %s [secrets|credentials|static|helm|policy|sbom|artifact-vulns|all]\n' "$0" >&2
     exit 2
     ;;
 esac

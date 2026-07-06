@@ -11,6 +11,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 TIMEOUT=120
 RECOVERY_TIMEOUT=60
@@ -43,7 +46,7 @@ wait_pgagroal_healthy() {
 }
 
 run_query() {
-    ${COMPOSE} run --rm -e PGPASSWORD=testpass test-client \
+    ${COMPOSE} run --rm -e PGPASSWORD="${POSTGRES_PASSWORD}" test-client \
         psql -h pgagroal -p 6432 -U testuser -d testdb \
              -c "SELECT 'ok' AS status;" -tA 2>/dev/null
 }

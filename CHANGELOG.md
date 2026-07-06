@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Class: security
+
+Completes the static-credential scrub started in 1.4.3: the chart was already
+credentials-by-reference only, but the public repository still carried
+literal test credentials, which AWS Marketplace review flags as
+static/default passwords (#89).
+
+### Security
+
+- **No credential literal anywhere in the tracked tree.** The compose stack
+  interpolates `POSTGRES_PASSWORD` / `PGEXPORTER_PASSWORD` from the host
+  environment fail-fast (documented in `.env.example`); the pgexporter
+  monitoring role is created by an init script that reads its password from
+  the runtime environment; tests and CI generate ephemeral credentials per
+  run (`test/lib/test-env.sh`). Enforced by a new validation test
+  (`test/validation/no-static-credentials-test.sh`) wired into
+  `scripts/security-checks.sh` and CI, governed by the new
+  `no-static-credentials` specification.
+- **pgexporter chart credentials are existingSecret-only**, mirroring the
+  pooler credentials hardened in 1.4.3: the inline
+  `pgexporter.credentials.password` path and the chart-created Secret are
+  removed; the chart references an operator-supplied Secret via
+  `pgexporter.credentials.existingSecret` (default
+  `pgagroal-pgexporter-credentials`, keys `PGEXPORTER_USER` /
+  `PGEXPORTER_PASSWORD`) and fails closed when it is empty.
+
+### Removed
+
+- `pgexporter.credentials.create`, `pgexporter.credentials.username`,
+  `pgexporter.credentials.password`, and the chart-created pgexporter Secret
+  template (`templates/pgexporter-secret.yaml`).
+- `postgres-init/01-pgexporter-role.sql` (replaced by
+  `postgres-init/01-pgexporter-role.sh`, which reads the role password from
+  the environment).
+
 ## [1.4.3] - 2026-07-01
 
 Class: security

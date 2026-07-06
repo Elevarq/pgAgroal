@@ -10,6 +10,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 TIMEOUT=120
 PGEXPORTER_METRICS_PORT="${PGEXPORTER_METRICS_PORT:-5002}"
@@ -53,7 +56,7 @@ start=$(date +%s)
 set +e
 # --no-deps is essential: without it, `compose run` would restart postgres to
 # satisfy the dependency chain, defeating the backend-loss scenario.
-${COMPOSE} run --rm --no-deps -e PGPASSWORD=testpass test-client \
+${COMPOSE} run --rm --no-deps -e PGPASSWORD="${POSTGRES_PASSWORD}" test-client \
     sh -c "timeout 60 psql -h pgagroal -p 6432 -U testuser -d testdb -c 'SELECT 1;'" >/dev/null 2>&1
 q_exit=$?
 set -e

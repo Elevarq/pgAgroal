@@ -4,6 +4,10 @@ Status: ACTIVE
 
 > Issue: Elevarq/pgAgroal#42 (part of #1, upstream split).
 > Confirmed 2026-05-29.
+> Credential handling tightened by Elevarq/pgAgroal#89 (2026-07-06):
+> R2/I1/I2 strengthened from "supplied via env/compose" to "no literal
+> credential value in any tracked file; fail-fast env interpolation".
+> See also `specifications/no-static-credentials/`.
 
 ## Purpose
 
@@ -63,7 +67,7 @@ data path, and the two metrics paths are independent of one another.
 | backend host | string | Resolvable service name on the compose network (`postgres`) |
 | backend port | int | Default 5432 |
 | monitoring user | string | Must hold `pg_monitor` (or be superuser in the test stack) |
-| monitoring password | string | Supplied via env / compose, never baked into an image |
+| monitoring password | string | Interpolated from the host environment at runtime (fail-fast, no default); never a literal in a tracked file, never baked into an image |
 | metrics port | int | The port pgexporter serves `/metrics` on |
 
 ### Outputs
@@ -84,13 +88,14 @@ data path, and the two metrics paths are independent of one another.
 | B5 | pgexporter is pointed at an unreachable backend | The stack is brought up | The failure is surfaced (pgexporter does not report healthy / metrics omit PostgreSQL series); the stack does not hang silently |
 | B6 | The stack is up and healthy, then the backend stops | A client queries through pgagroal and `/metrics` is scraped | pgagroal connection attempts fail cleanly (no hang past `blocking_timeout`); pgexporter's HTTP endpoint still responds, with PostgreSQL series absent or marked unavailable |
 | B7 | The stack is up | `GET /metrics` is requested from pgagroal's native metrics endpoint (port 2346) | HTTP 200 with Prometheus-format output containing pgagroal pooler metrics (e.g. a `pgagroal_*` series) |
+| B8 | A required credential variable (`POSTGRES_PASSWORD`, `PGEXPORTER_PASSWORD`) is unset in the host environment and no `.env` provides it | Any `docker compose` command that resolves the configuration is run | Compose fails immediately with an error naming the missing variable; no service starts with an empty or default credential |
 
 ## Rules
 
 | ID | Rule |
 |---|---|
 | R1 | pgexporter MUST connect directly to `postgres`, NOT through pgagroal, so that pooler statistics are not polluted by the exporter's own scrape connections. |
-| R2 | The monitoring credential MUST be supplied via environment/compose configuration, never baked into an image layer. |
+| R2 | Credentials (backend and monitoring) MUST be interpolated from the host environment at runtime using fail-fast compose interpolation (`${VAR:?}` with no default). No tracked file may carry a literal credential value, and no credential is ever baked into an image layer. |
 | R3 | pgagroal and pgexporter MUST declare a `depends_on` health condition on `postgres` so startup is ordered. |
 | R4 | The existing pooled-connection smoke test MUST be preserved as a validation step in the stack. |
 | R5 | Service defaults MUST be consistent with the hardened posture already used by the Helm chart where applicable (non-root, health checks, no secrets in images). |
@@ -100,8 +105,8 @@ data path, and the two metrics paths are independent of one another.
 
 | ID | Invariant |
 |---|---|
-| I1 | The stack is reproducible from committed sources alone — `docker compose up` requires no manual post-steps. |
-| I2 | No secret is committed to the repository or baked into an image; credentials enter only at runtime via compose/env. |
+| I1 | The stack is reproducible from committed sources plus runtime-supplied credentials — `docker compose up` requires no manual post-steps beyond exporting the credential variables documented in `.env.example` (which are deliberately not committed). |
+| I2 | No credential literal exists anywhere in the tracked tree — not in compose files, init scripts, tests, CI workflows, or documentation examples. Credentials enter only at runtime via host-environment interpolation; tests and CI generate ephemeral values per run. |
 | I3 | pgagroal remains the sole pooling path for client traffic; pgexporter never sits in the client data path. |
 | I4 | Removing pgexporter from the stack leaves the pgagroal pooling behaviour unchanged (the exporter is additive, not load-bearing for pooling). |
 | I5 | The two observability paths are independent: pgexporter being unavailable does not affect pgagroal's native metrics endpoint, and vice versa. |
@@ -110,6 +115,7 @@ data path, and the two metrics paths are independent of one another.
 
 | Trigger | System response |
 |---|---|
+| Required credential variable unset | `docker compose` fails immediately with an error naming the missing variable (B8); nothing starts and no default credential is substituted. |
 | Backend never becomes healthy | Dependent services do not report healthy; `docker compose up` does not falsely indicate a working stack (B5). |
 | Monitoring user lacks `pg_monitor` | pgexporter starts but PostgreSQL metric series are missing/empty; surfaced via B3 assertion failing, not a silent pass. |
 | Backend lost after startup | pgagroal returns connection errors within `blocking_timeout`; pgexporter endpoint stays up with PostgreSQL series unavailable (B6). |

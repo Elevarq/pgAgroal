@@ -98,12 +98,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Secret name for the pgexporter monitoring-role credentials.
+Secret name for the pgexporter monitoring-role credentials. Mirrors the
+pooler credentials: the chart ships NO credential values and never creates
+a Secret; the operator provides one and the chart references it by name.
 */}}
 {{- define "pgagroal.pgexporter.secretName" -}}
 {{- if .Values.pgexporter.credentials.existingSecret }}
 {{- .Values.pgexporter.credentials.existingSecret }}
 {{- else }}
-{{- include "pgagroal.pgexporter.fullname" . }}
+{{- fail "pgagroal: set pgexporter.credentials.existingSecret to the name of a Kubernetes Secret containing PGEXPORTER_USER and PGEXPORTER_PASSWORD. The chart contains no credential values and does not create the Secret." }}
 {{- end }}
 {{- end }}
