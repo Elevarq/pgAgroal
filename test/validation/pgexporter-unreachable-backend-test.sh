@@ -11,6 +11,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Ephemeral stack credentials (spec: no-static-credentials R5).
+# shellcheck disable=SC1091
+. test/lib/test-env.sh
+
 COMPOSE="docker compose"
 SETTLE=30
 PGEXPORTER_METRICS_PORT="${PGEXPORTER_METRICS_PORT:-5002}"
