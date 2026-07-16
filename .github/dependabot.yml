@@ -15,21 +15,35 @@ updates:
     schedule:
       interval: weekly
       day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
     open-pull-requests-limit: 5
     labels:
       - automation
       - dependencies
     commit-message:
       prefix: "ci"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
       day: monday
+      time: "02:00"
+      timezone: America/Los_Angeles
     open-pull-requests-limit: 3
     labels:
       - automation
       - dependencies
     commit-message:
       prefix: "ci"
+    groups:
+      docker-minor-patch:
+        update-types:
+          - minor
+          - patch
