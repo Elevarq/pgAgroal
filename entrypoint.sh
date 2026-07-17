@@ -3,6 +3,15 @@ set -euo pipefail
 
 CONF_DIR="${CONF_DIR:-/etc/pgagroal}"
 
+# pgagroal-admin stores its master key below $HOME. Kubernetes and the Helm
+# chart deliberately run with a read-only root filesystem, so the image home
+# directory is not a safe place for that state. Keep generated key material in
+# the writable /tmp volume instead (the users file is regenerated on every
+# start as well). PGAGROAL_HOME permits operators to provide another writable
+# location when /tmp is restricted.
+export HOME="${PGAGROAL_HOME:-/tmp/pgagroal-home}"
+mkdir -p "${HOME}"
+
 # DEFAULT_HBA_SOURCE restricts accepted source addresses to the RFC1918
 # private ranges. pgagroal's HBA matches CIDRs on OCTET boundaries only
 # (e.g. /8, /16, /24 work; /12 does NOT), so 172.16.0.0/12 is expanded into
