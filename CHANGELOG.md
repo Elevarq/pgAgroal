@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Class: security
 
+## [1.4.4] - 2026-07-17
+
+Class: fix
+
+### Fixed
+
+- Keep the pgagroal-admin master key under a writable `/tmp`-backed home so
+  Secret-backed user registration works with the Helm chart's read-only root
+  filesystem (fixes #94).
+
 Completes the static-credential scrub started in 1.4.3: the chart was already
 credentials-by-reference only, but the public repository still carried
 literal test credentials, which AWS Marketplace review flags as
