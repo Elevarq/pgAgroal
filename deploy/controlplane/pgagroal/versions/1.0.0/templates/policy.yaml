@@ -1,0 +1,13 @@
+kind: policy
+name: {{ include "pgagroal.policy.name" . }}
+description: Grants the pgAgroal identity reveal access to its credentials secret
+tags:
+  {{- include "pgagroal.tags" . | nindent 2 }}
+bindings:
+  - permissions:
+      - reveal
+    principalLinks:
+      - //gvc/{{ .Values.global.cpln.gvc }}/identity/{{ include "pgagroal.identity.name" . }}
+targetKind: secret
+targetLinks:
+  - //secret/{{ include "pgagroal.credentials.name" . }}

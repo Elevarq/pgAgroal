@@ -1,0 +1,7 @@
+{{- include "pgagroal.validateConfig" . -}}
+kind: identity
+name: {{ include "pgagroal.identity.name" . }}
+description: Elevarq pgAgroal identity for reading its credentials secret
+gvc: {{ .Values.global.cpln.gvc }}
+tags:
+  {{- include "pgagroal.tags" . | nindent 2 }}

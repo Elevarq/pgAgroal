@@ -1,0 +1,92 @@
+# =============================================================================
+# Elevarq pgAgroal — Control Plane Catalog template values
+# =============================================================================
+# pgAgroal is a high-performance PostgreSQL connection pooler. It fronts an
+# EXISTING PostgreSQL database that YOU supply: other workloads in the GVC connect
+# to pgAgroal on TCP 6432, and pgAgroal multiplexes those clients onto a small
+# pool of backend connections. It is stateless — no volume is required.
+#
+# The values below are PLACEHOLDERS so the chart renders for catalog validation.
+# You MUST override the required inputs (backend.host, auth.username,
+# auth.password) — the placeholders are intentionally non-functional.
+#
+# The image is pinned by immutable digest and is enforced: the chart only deploys
+# the exact reviewed image (ghcr.io/elevarq/pgagroal:1.4.4 — pgagroal 2.1.0,
+# multi-arch linux/amd64 + linux/arm64, cosign-signed). Changing
+# image.repository/digest is rejected.
+image:
+  repository: ghcr.io/elevarq/pgagroal
+  tag: "1.4.4"                 # informational only; the digest is what deploys
+  digest: "sha256:749e3afc534af0c51dec128c7b229f8126d1cabdbea530d68e0ba9bf22a45928"
+
+# Number of pooler replicas (stateless; each keeps its own independent pool).
+replicas: 1
+
+# ---------------------------------------------------------------------------
+# Resource sizing. A pooler is lightweight (< 50 MB RAM for ~100 connections);
+# scale memory with pool.maxConnections.
+# ---------------------------------------------------------------------------
+resources:
+  cpu: 100m
+  memory: 128Mi
+
+# ---------------------------------------------------------------------------
+# Backend PostgreSQL — the customer's EXISTING database (nothing is bundled).
+# ---------------------------------------------------------------------------
+backend:
+  host: "postgres.example.com"   # REQUIRED — override with your PostgreSQL host/IP
+  port: 5432
+
+# ---------------------------------------------------------------------------
+# Authentication. Clients authenticate to pgAgroal with these credentials, and
+# pgAgroal pools connections to the backend for this user — so it must be a valid
+# backend PostgreSQL role. Only this pre-registered user is accepted
+# (PGAGROAL_ALLOW_UNKNOWN_USERS is off).
+# ---------------------------------------------------------------------------
+auth:
+  username: "app"                       # REQUIRED — a valid backend PostgreSQL user
+  password: "REPLACE_WITH_DB_PASSWORD"  # REQUIRED — override; stored in a Control Plane secret
+
+# ---------------------------------------------------------------------------
+# Pool behaviour.
+# ---------------------------------------------------------------------------
+pool:
+  maxConnections: 100   # maximum pooled connections (pgAgroal grows to this)
+
+# fatal | error | warn | info | debug1..debug5 | trace
+logLevel: "info"
+
+# pgAgroal Prometheus /metrics on :2346 (operational metrics only, unauthenticated).
+# Off by default — enable to expose the metrics port to the GVC.
+metrics:
+  enabled: false
+
+# ---------------------------------------------------------------------------
+# Client source allow-list (pgAgroal HBA), comma-separated CIDRs, or "all".
+# Network access to the pooler port is ALREADY restricted to the same GVC by the
+# workload firewall (firewall.internal.inboundAllowType), which is the network
+# gate. This defaults to "all" because that firewall does the network isolation
+# and pgAgroal's HBA CIDR matching is octet-boundary-only (it cannot express many
+# cloud pod networks such as 100.64.0.0/10). Set explicit CIDRs for an additional
+# app-layer allow-list if your client addressing is stable.
+# ---------------------------------------------------------------------------
+hbaSource: "all"
+
+# ---------------------------------------------------------------------------
+# Firewall.
+# Inbound: same GVC may reach the pooler port (6432). Outbound: egress is
+# restricted to TCP on the backend port; the destination CIDR defaults to
+# 0.0.0.0/0 because managed PostgreSQL IPs often rotate — narrow it if stable.
+# ---------------------------------------------------------------------------
+firewall:
+  internal:
+    inboundAllowType: same-gvc   # none | same-gvc | same-org | workload-list
+    workloads: []
+  external:
+    outboundAllowCIDR:
+      - 0.0.0.0/0                # narrow to the backend CIDR when it is stable
+
+# Injected by the platform when createsGvc is false.
+global:
+  cpln:
+    gvc: ""
