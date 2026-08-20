@@ -1,0 +1,31 @@
+name: Control Plane template
+
+# Validates the Control Plane Catalog template (deploy/controlplane/pgagroal):
+# positive default render (upstream validate-charts.yml parity) plus this
+# template's fail-fast contract. Scoped to the template path.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/controlplane/**'
+      - '.github/workflows/controlplane-template.yml'
+  pull_request:
+    paths:
+      - 'deploy/controlplane/**'
+      - '.github/workflows/controlplane-template.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  render-acceptance:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v5
+
+      - name: Chart acceptance tests (positive + negative render)
+        run: bash deploy/controlplane/pgagroal/tests/render-acceptance.sh

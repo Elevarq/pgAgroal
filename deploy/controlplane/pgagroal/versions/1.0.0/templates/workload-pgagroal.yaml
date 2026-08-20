@@ -1,0 +1,100 @@
+{{- include "pgagroal.validateConfig" . -}}
+kind: workload
+name: {{ include "pgagroal.name" . }}
+gvc: {{ .Values.global.cpln.gvc }}
+description: Elevarq pgAgroal — PostgreSQL connection pooler
+tags:
+  {{- include "pgagroal.tags" . | nindent 2 }}
+spec:
+  # Stateless: pgAgroal keeps only an in-memory connection pool, so it needs no
+  # volume and can run as one or more independent replicas.
+  type: standard
+  identityLink: //identity/{{ include "pgagroal.identity.name" . }}
+  containers:
+    - name: pgagroal
+      image: {{ include "pgagroal.image" . }}
+      inheritEnv: false
+      cpu: {{ .Values.resources.cpu | quote }}
+      memory: {{ .Values.resources.memory | quote }}
+      ports:
+        # The pooled PostgreSQL port other GVC workloads connect to.
+        - number: 6432
+          protocol: tcp
+        {{- if .Values.metrics.enabled }}
+        - number: 2346
+          protocol: http
+        {{- end }}
+      env:
+        - name: PGAGROAL_HOST
+          value: "*"
+        - name: PGAGROAL_PORT
+          value: "6432"
+        - name: PGAGROAL_METRICS_PORT
+          value: "2346"
+        - name: PGAGROAL_LOG_LEVEL
+          value: {{ .Values.logLevel | quote }}
+        # Only pre-registered users may connect (hardened).
+        - name: PGAGROAL_ALLOW_UNKNOWN_USERS
+          value: "false"
+        - name: PGAGROAL_HBA_SOURCE
+          value: {{ .Values.hbaSource | quote }}
+        - name: MAX_CONNECTIONS
+          value: {{ .Values.pool.maxConnections | quote }}
+        # --- Backend PostgreSQL (customer-supplied external database) ---
+        - name: PG_BACKEND_HOST
+          value: {{ .Values.backend.host | quote }}
+        - name: PG_BACKEND_PORT
+          value: {{ .Values.backend.port | quote }}
+        - name: PG_USERNAME
+          value: {{ .Values.auth.username | quote }}
+        - name: PG_PASSWORD
+          value: 'cpln://secret/{{ include "pgagroal.credentials.name" . }}.pg-password'
+      # pgagroal-cli ping is the canonical daemon health check (matches the image
+      # HEALTHCHECK); it verifies the pooler is up, not backend connectivity.
+      readinessProbe:
+        exec:
+          command:
+            - pgagroal-cli
+            - -c
+            - /etc/pgagroal/pgagroal.conf
+            - ping
+        failureThreshold: 3
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      livenessProbe:
+        exec:
+          command:
+            - pgagroal-cli
+            - -c
+            - /etc/pgagroal/pgagroal.conf
+            - ping
+        failureThreshold: 3
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        successThreshold: 1
+        timeoutSeconds: 5
+  defaultOptions:
+    autoscaling:
+      metric: disabled
+      minScale: {{ int .Values.replicas }}
+      maxScale: {{ int .Values.replicas }}
+    capacityAI: false
+    debug: false
+    suspend: false
+    timeoutSeconds: 60
+  firewallConfig:
+    external:
+      outboundAllowCIDR:
+        {{- toYaml .Values.firewall.external.outboundAllowCIDR | nindent 8 }}
+      # Restrict egress to TCP on the backend PostgreSQL port.
+      outboundAllowPort:
+        - number: {{ int .Values.backend.port }}
+          protocol: tcp
+    internal:
+      inboundAllowType: {{ .Values.firewall.internal.inboundAllowType }}
+      {{- if .Values.firewall.internal.workloads }}
+      inboundAllowWorkload:
+        {{- toYaml .Values.firewall.internal.workloads | nindent 8 }}
+      {{- end }}

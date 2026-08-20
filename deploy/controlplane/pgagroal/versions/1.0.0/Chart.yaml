@@ -1,0 +1,32 @@
+apiVersion: v2
+name: pgagroal
+description: High-performance PostgreSQL connection pooler that fronts your existing database.
+type: application
+version: 1.0.0
+appVersion: "1.4.4"
+
+home: https://github.com/Elevarq/pgAgroal
+sources:
+  - https://github.com/Elevarq/pgAgroal
+  - https://github.com/pgagroal/pgagroal
+maintainers:
+  - name: Elevarq
+    url: https://elevarq.com
+keywords:
+  - postgresql
+  - postgres
+  - connection-pooler
+  - pooler
+  - pgagroal
+  - database
+
+annotations:
+  created: "2026-08-20"
+  lastModified: "2026-08-20"
+  category: "database"
+  createsGvc: false
+
+dependencies:
+  - name: cpln-common
+    version: 1.0.0
+    repository: "oci://ghcr.io/controlplane-com/templates"
