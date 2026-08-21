@@ -59,6 +59,11 @@ private subnets) without breaking them.
 - **B5** — Given `PGAGROAL_ALLOW_UNKNOWN_USERS` unset, when `pgagroal.conf`
   is rendered, then `allow_unknown_users = false` (the hardened default —
   unknown users are not passed through to the backend).
+- **B6** — Given `PGAGROAL_HBA_SOURCE` containing an entry that is neither `all`
+  nor a CIDR (e.g. `all trust #`, or any value with whitespace, `#`, or a bare
+  auth method), when the HBA file is generated, then that entry is dropped with a
+  warning and no HBA line is emitted for it — so an attacker-controlled value
+  cannot inject a `trust`/`all` method or comment out `scram-sha-256`.
 
 ## Rules
 
@@ -67,6 +72,10 @@ private subnets) without breaking them.
   always `scram-sha-256`.
 - **R2** — `allow_unknown_users` in the rendered `pgagroal.conf` equals the
   value of `PGAGROAL_ALLOW_UNKNOWN_USERS`, which defaults to `false`.
+- **R3** — Each `PGAGROAL_HBA_SOURCE` entry (after trimming) is accepted only if
+  it matches `^(all|d.d.d.d/mask)$`; any other entry is dropped with a warning and
+  produces no HBA line. This makes R1's `scram-sha-256`-only guarantee hold for
+  every possible input.
 
 ## Invariants
 
@@ -84,6 +93,7 @@ private subnets) without breaking them.
 | Trigger | Response |
 |---------|----------|
 | `PGAGROAL_HBA_SOURCE` contains an empty element (e.g. trailing comma) | The empty element is skipped; no malformed HBA line is emitted. |
+| `PGAGROAL_HBA_SOURCE` contains an entry that is not `all` or a CIDR (injection attempt, stray token) | The entry is dropped with a warning to stderr; no HBA line is emitted for it (R3). |
 
 ## Constraints / NFR
 

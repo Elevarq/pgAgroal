@@ -68,3 +68,16 @@ the empty element)
 **Given**: `PGAGROAL_ALLOW_UNKNOWN_USERS` unset
 **When**: the entrypoint renders `pgagroal.conf` (applying its default)
 **Then**: the rendered config contains `allow_unknown_users = false`
+
+## AC-08: injection / invalid entries are dropped, never a `trust` rule
+
+**Spec refs**: B6, R3, I3
+
+**Given**: `PGAGROAL_HBA_SOURCE='all trust #'` (or another invalid token)
+**When**: the HBA file is generated
+**Then**: no `host` line is emitted for it, and no generated line uses `trust` (or
+any method other than `scram-sha-256`).
+
+**And Given**: `PGAGROAL_HBA_SOURCE='10.0.0.0/8, all trust #, 192.168.0.0/16'`
+**Then**: exactly two `host` lines are emitted (`10.0.0.0/8`, `192.168.0.0/16`);
+the middle injection entry is dropped.

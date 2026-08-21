@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Class: security
 
+### Security
+
+- Reject HBA source-address injection: `build_hba_lines` now accepts each
+  `PGAGROAL_HBA_SOURCE` entry only if it is exactly `all` or a CIDR, dropping any
+  other value with a warning. Previously a crafted value (e.g. `all trust #`) was
+  inserted verbatim into the HBA line and could comment out the `scram-sha-256`
+  method, leaving a no-auth `trust` rule. This enforces the hba-source-restriction
+  spec's `scram-sha-256`-only invariant for every input (#105).
+
 ## [1.4.4] - 2026-07-17
 
 Class: fix

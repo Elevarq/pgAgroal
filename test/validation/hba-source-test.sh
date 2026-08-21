@@ -84,5 +84,20 @@ PGAGROAL_ALLOW_UNKNOWN_USERS="${PGAGROAL_ALLOW_UNKNOWN_USERS:-false}" \
     envsubst < pgagroal.conf.template > "${tmp}/pgagroal-default.conf"
 check "AC-07 default allow_unknown_users=false" "1" "$(grep -c '^allow_unknown_users = false$' "${tmp}/pgagroal-default.conf")"
 
+# AC-08: injection / invalid entries are dropped, never a `trust` rule.
+out="$(PGAGROAL_HBA_SOURCE='all trust #' build_hba_lines 2>/dev/null)"
+check "AC-08 injection emits no host line" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+check "AC-08 no trust method anywhere"     "0" "$(printf '%s\n' "${out}" | grep -cE '[[:space:]]trust([[:space:]]|$)')"
+for bad in 'foo' '10.0.0.0/8 trust' '0.0.0.0/0;' 'all;drop'; do
+    out="$(PGAGROAL_HBA_SOURCE="${bad}" build_hba_lines 2>/dev/null)"
+    check "AC-08 invalid '${bad}' dropped" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+done
+# Valid entries survive while the injection entry between them is dropped.
+out="$(PGAGROAL_HBA_SOURCE='10.0.0.0/8, all trust #, 192.168.0.0/16' build_hba_lines 2>/dev/null)"
+check "AC-08 two valid lines kept"    "2" "$(printf '%s\n' "${out}" | grep -c '^host')"
+check "AC-08 valid 10.0.0.0/8 kept"   "1" "$(printf '%s\n' "${out}" | grep -c '10\.0\.0\.0/8')"
+check "AC-08 valid 192.168.0.0/16 kept" "1" "$(printf '%s\n' "${out}" | grep -c '192\.168\.0\.0/16')"
+check "AC-08 all lines scram-sha-256" "2" "$(printf '%s\n' "${out}" | grep -cE '[[:space:]]scram-sha-256$')"
+
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]
