@@ -94,6 +94,20 @@ spec:
                   name: {{ include "pgagroal.secretName" . }}
                   key: PG_PASSWORD
             {{- end }}
+            {{- if .Values.tls.enabled }}
+            - name: PGAGROAL_TLS
+              value: "on"
+            - name: PGAGROAL_TLS_CERT_FILE
+              value: /etc/pgagroal/tls-src/tls.crt
+            - name: PGAGROAL_TLS_KEY_FILE
+              value: /etc/pgagroal/tls-src/tls.key
+            {{- if .Values.tls.mutualTLS }}
+            - name: PGAGROAL_TLS_CA_FILE
+              value: /etc/pgagroal/tls-src/ca.crt
+            - name: PGAGROAL_TLS_CERT_AUTH_MODE
+              value: {{ .Values.tls.certAuthMode | quote }}
+            {{- end }}
+            {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -105,6 +119,11 @@ spec:
               mountPath: /etc/pgagroal
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.tls.enabled }}
+            - name: tls-src
+              mountPath: /etc/pgagroal/tls-src
+              readOnly: true
+            {{- end }}
         {{- if .Values.observability.sidecar.enabled }}
         - name: observability-sidecar
           image: "{{ .Values.observability.sidecar.image }}:{{ .Values.observability.sidecar.tag }}"
@@ -139,6 +158,11 @@ spec:
           emptyDir: {}
         - name: tmp
           emptyDir: {}
+        {{- if .Values.tls.enabled }}
+        - name: tls-src
+          secret:
+            secretName: {{ .Values.tls.existingSecret }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

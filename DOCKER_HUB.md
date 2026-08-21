@@ -55,6 +55,7 @@ All configuration is via environment variables. Defaults are production-safe.
 | `PGAGROAL_LOG_LEVEL` | `info` | Log level |
 | `PG_USERNAME` | — | Optional; registers a pgagroal user for frontend auth |
 | `PG_PASSWORD` | — | Password for `PG_USERNAME` |
+| `PGAGROAL_TLS` | `off` | Enable frontend TLS; provide `PGAGROAL_TLS_CERT_FILE` + `PGAGROAL_TLS_KEY_FILE` (see README) |
 
 ## Metrics
 
