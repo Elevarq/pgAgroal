@@ -6,12 +6,15 @@ pgAgroal** via the **Catalog API** (`StartChangeSet`). Tracks
 are from the official
 [container-products Catalog API reference](https://docs.aws.amazon.com/marketplace-catalog/latest/api-reference/container-products.html).
 
-> **v1.4.3 (harden-then-resubmit).** The public version is now **Elevarq
-> packaging v1.4.3** (bundling upstream pgagroal 2.1.0), superseding the
-> in-review 1.3.0. `02-add-helm-delivery.json` here is set to 1.4.3; re-host
-> the **1.4.3** image + chart into the Marketplace ECR (same steps as the
-> 1.3.0 re-host below, with `:1.4.3` tags) before adding the delivery option.
-> Do not broaden 1.3.0 to Public.
+> **v1.4.5 (frontend TLS).** The public version is now **Elevarq packaging
+> v1.4.5** (bundling upstream pgagroal 2.1.0), superseding 1.4.3. 1.4.5 adds
+> optional frontend TLS (client -> pooler; `tls.enabled` + an existing Secret,
+> verify-ca mutual TLS). `02-add-helm-delivery.json` here is set to 1.4.5;
+> re-host the **1.4.5** image (platform manifests only, attestations stripped)
+> and chart into the Marketplace ECR with `:1.4.5` tags before adding the
+> delivery option. 1.4.4 was never published (image re-hosted, no delivery
+> option); 1.4.5 supersedes it. After the ingestion scan succeeds and 1.4.5 is
+> Public, retire 1.4.3 with `RestrictDeliveryOptions`.
 
 The product already exists (Draft) and the ECR repos are already created:
 
