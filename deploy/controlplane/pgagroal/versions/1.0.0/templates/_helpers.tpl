@@ -19,13 +19,25 @@ Resource naming — all names derive from .Release.Name to avoid collisions.
 {{- printf "%s-pgagroal-credentials" .Release.Name -}}
 {{- end -}}
 
+{{- define "pgagroal.tls.cert.name" -}}
+{{- printf "%s-pgagroal-tls-cert" .Release.Name -}}
+{{- end -}}
+
+{{- define "pgagroal.tls.key.name" -}}
+{{- printf "%s-pgagroal-tls-key" .Release.Name -}}
+{{- end -}}
+
+{{- define "pgagroal.tls.ca.name" -}}
+{{- printf "%s-pgagroal-tls-ca" .Release.Name -}}
+{{- end -}}
+
 {{/*
 ================================================================================
 Reviewed production image — mandatory and immutable (repository@digest only).
 ================================================================================
 */}}
 {{- define "pgagroal.expectedRepository" -}}ghcr.io/elevarq/pgagroal{{- end -}}
-{{- define "pgagroal.expectedDigest" -}}sha256:749e3afc534af0c51dec128c7b229f8126d1cabdbea530d68e0ba9bf22a45928{{- end -}}
+{{- define "pgagroal.expectedDigest" -}}sha256:36017745ebd98816c9adac5868965f32b06f72a4049b5fb107cd5bef629fbfcb{{- end -}}
 {{- define "pgagroal.image" -}}
 {{- printf "%s@%s" (include "pgagroal.expectedRepository" .) (include "pgagroal.expectedDigest" .) -}}
 {{- end -}}
@@ -99,6 +111,23 @@ Validation — fail fast on missing/invalid inputs before any resource renders.
 {{- if not (regexMatch "^(all|([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2})$" $t) -}}
 {{- fail (printf "hbaSource entry '%s' is invalid; each entry must be `all` or a CIDR (e.g. 10.0.0.0/8). No spaces or other characters are allowed." $t) -}}
 {{- end -}}
+{{- end -}}
+{{- /* Frontend TLS (client -> pooler). Only verify-ca client-cert checking is
+       available (the pgagroal 2.1.0 pooler has no tls_cert_auth_mode key). */ -}}
+{{- if not (kindIs "bool" .Values.tls.enabled) -}}
+{{- fail "tls.enabled must be a boolean (true or false, not a quoted string)" -}}
+{{- end -}}
+{{- if not (kindIs "bool" .Values.tls.mutualTLS) -}}
+{{- fail "tls.mutualTLS must be a boolean (true or false, not a quoted string)" -}}
+{{- end -}}
+{{- if and .Values.tls.enabled (or (not .Values.tls.cert) (not .Values.tls.key)) -}}
+{{- fail "tls.cert and tls.key are required when tls.enabled is true (PEM server certificate and private key)" -}}
+{{- end -}}
+{{- if and .Values.tls.mutualTLS (not .Values.tls.enabled) -}}
+{{- fail "tls.mutualTLS requires tls.enabled=true" -}}
+{{- end -}}
+{{- if and .Values.tls.mutualTLS (not .Values.tls.caCert) -}}
+{{- fail "tls.caCert (PEM CA bundle) is required when tls.mutualTLS is true" -}}
 {{- end -}}
 {{- end -}}
 

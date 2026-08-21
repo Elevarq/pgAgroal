@@ -15,10 +15,11 @@
 #   PGA-R009  workload is stateless (no volumeset), pooler port 6432/tcp, egress scoped to backend port
 #   PGA-R010  security invariants: unknown-user passthrough off, pgagroal-cli ping probe, metrics off by default
 #   PGA-R011  hbaSource accepts only `all` or CIDRs (no HBA injection); workload-list non-empty
+#   PGA-R012  frontend TLS: off by default; opt-in renders secrets+env+reveal; mutualTLS adds CA; bad inputs fail-fast
 set -uo pipefail
 
 CHART_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/versions/1.0.0"
-EXPECTED_DIGEST="sha256:749e3afc534af0c51dec128c7b229f8126d1cabdbea530d68e0ba9bf22a45928"
+EXPECTED_DIGEST="sha256:36017745ebd98816c9adac5868965f32b06f72a4049b5fb107cd5bef629fbfcb"
 fails=0
 
 pass() { printf '  ok   %s\n' "$1"; }
@@ -105,8 +106,31 @@ neg R011 "hbaSource injects trust"   --set-string hbaSource="all trust #"
 neg R011 "hbaSource with space"      --set-string hbaSource="10.0.0.0/8 trust"
 neg R011 "hbaSource bogus token"     --set-string hbaSource="not-a-cidr"
 neg R011 "workload-list empty"       --set firewall.internal.inboundAllowType=workload-list
+neg R012 "tls.enabled without cert/key"      --set tls.enabled=true
+neg R012 "tls.enabled cert but no key"       --set tls.enabled=true --set-string tls.cert=x
+neg R012 "tls.mutualTLS without tls.enabled" --set tls.mutualTLS=true
+neg R012 "tls.mutualTLS without caCert"      --set tls.enabled=true --set-string tls.cert=x --set-string tls.key=y --set tls.mutualTLS=true
+neg R012 "string tls.enabled"                --set-string tls.enabled=false
+neg R012 "string tls.mutualTLS"              --set-string tls.mutualTLS=false
 
 echo "== positive opt-ins (must render) =="
+# R012 — TLS off by default: no TLS env, no TLS secrets.
+if OUT="$(render)"; then
+  if echo "$OUT" | grep -q 'PGAGROAL_TLS'; then fail "R012 TLS env present with tls.enabled=false"; else pass "R012 no TLS env by default"; fi
+  if echo "$OUT" | grep -qE 'name: validation-pgagroal-tls-'; then fail "R012 TLS secret rendered by default"; else pass "R012 no TLS secret by default"; fi
+fi
+# R012 — TLS on: env + cert/key secrets + reveal + mounts.
+TLS_ON="$(render --set tls.enabled=true --set-string tls.cert=CERTPEM --set-string tls.key=KEYPEM 2>&1)"
+if echo "$TLS_ON" | grep -A1 'name: PGAGROAL_TLS$' | grep -q 'value: "on"'; then pass "R012 tls.enabled=true sets PGAGROAL_TLS on"; else fail "R012 tls.enabled=true did not set PGAGROAL_TLS on"; fi
+if echo "$TLS_ON" | grep -q 'name: validation-pgagroal-tls-cert' && echo "$TLS_ON" | grep -q 'name: validation-pgagroal-tls-key'; then pass "R012 cert+key opaque secrets rendered"; else fail "R012 cert/key secrets missing"; fi
+if echo "$TLS_ON" | grep -q 'type: opaque'; then pass "R012 TLS secrets are opaque (file-mountable)"; else fail "R012 TLS secrets not opaque"; fi
+if echo "$TLS_ON" | grep -q '//secret/validation-pgagroal-tls-cert' && echo "$TLS_ON" | grep -q '//secret/validation-pgagroal-tls-key'; then pass "R012 policy reveals TLS secrets to the identity"; else fail "R012 policy does not reveal TLS secrets"; fi
+if echo "$TLS_ON" | grep -q 'cpln://secret/validation-pgagroal-tls-cert.payload'; then pass "R012 cert mounted from secret payload"; else fail "R012 cert not mounted from secret payload"; fi
+if echo "$TLS_ON" | grep -q 'PGAGROAL_TLS_CA_FILE'; then fail "R012 CA file set without mutualTLS"; else pass "R012 no CA file without mutualTLS"; fi
+# R012 — mutualTLS: adds CA secret + env + reveal.
+MTLS="$(render --set tls.enabled=true --set-string tls.cert=CERTPEM --set-string tls.key=KEYPEM --set tls.mutualTLS=true --set-string tls.caCert=CAPEM 2>&1)"
+if echo "$MTLS" | grep -q 'name: validation-pgagroal-tls-ca' && echo "$MTLS" | grep -q 'PGAGROAL_TLS_CA_FILE' && echo "$MTLS" | grep -q '//secret/validation-pgagroal-tls-ca'; then pass "R012 mutualTLS renders CA secret+env+reveal"; else fail "R012 mutualTLS did not render CA secret/env/reveal"; fi
+
 if render --set metrics.enabled=true 2>/dev/null | grep -q 'number: 2346'; then
   pass "R007 metrics.enabled=true exposes the metrics port 2346"
 else

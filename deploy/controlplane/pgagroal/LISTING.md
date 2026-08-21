@@ -37,14 +37,16 @@ to the backend's port, and only the configured pooled user is accepted.
 - An existing PostgreSQL reachable from the GVC.
 - A PostgreSQL role clients pool through (`CONNECT` plus the application-required
   schema and object privileges).
-- Note: TLS to/from the pooler is not configurable in this version — use on a
-  trusted private network path to the backend.
+- Optional: PEM server certificate and key if you enable frontend TLS
+  (`tls.enabled`) for client → pooler connections.
 
 ## Security & privacy
 
 - Non-root (UID/GID 1000) under Control Plane's restricted container capabilities.
 - Backend password held in a Control Plane secret, revealed only to the pgAgroal
   identity — never baked into the image.
+- Optional frontend TLS (`tls.enabled`, plus `tls.mutualTLS` for verify-ca client
+  certificates); certificate and key held in Control Plane secrets, never in the image.
 - Egress restricted to the backend TCP port; only the pre-registered user accepted.
 
 ## PostgreSQL compatibility
@@ -52,9 +54,10 @@ to the backend's port, and only the configured pooled user is accepted.
 Use a PostgreSQL major version still supported by the PostgreSQL project. This
 container bundles upstream pgagroal 2.1.0; repository CI currently exercises
 PostgreSQL 17. Managed services (Amazon RDS/Aurora, Azure Database for PostgreSQL,
-Google Cloud SQL) require private network reachability to the backend **and** must
-permit non-TLS client connections, because this container version cannot enable
-backend TLS.
+Google Cloud SQL) require private network reachability to the backend. Frontend TLS
+(client → pooler) is configurable via `tls.enabled`; backend TLS (pooler →
+PostgreSQL) is negotiated by pgagroal from the backend host and is not configured
+by this template.
 
 ## Links
 
@@ -66,5 +69,5 @@ backend TLS.
 
 This is the **free, open-source** pgAgroal container — not the Elevarq pgAgroal
 Enterprise product. Present it as a lightweight PostgreSQL connection pooler; do
-not imply Enterprise features (advanced auth, TLS termination, operator) are
-included.
+not imply Enterprise features (advanced auth, vault-backed client-cert auth,
+operator, fleet management) are included.

@@ -11,13 +11,13 @@
 # auth.password) — the placeholders are intentionally non-functional.
 #
 # The image is pinned by immutable digest and is enforced: the chart only deploys
-# the exact reviewed image (ghcr.io/elevarq/pgagroal:1.4.4 — pgagroal 2.1.0,
+# the exact reviewed image (ghcr.io/elevarq/pgagroal:1.4.5 — pgagroal 2.1.0,
 # multi-arch linux/amd64 + linux/arm64, cosign-signed). Changing
 # image.repository/digest is rejected.
 image:
   repository: ghcr.io/elevarq/pgagroal
-  tag: "1.4.4"                 # informational only; the digest is what deploys
-  digest: "sha256:749e3afc534af0c51dec128c7b229f8126d1cabdbea530d68e0ba9bf22a45928"
+  tag: "1.4.5"                 # informational only; the digest is what deploys
+  digest: "sha256:36017745ebd98816c9adac5868965f32b06f72a4049b5fb107cd5bef629fbfcb"
 
 # Number of pooler replicas (stateless; each keeps its own independent pool).
 replicas: 1
@@ -60,6 +60,22 @@ logLevel: "info"
 # Off by default — enable to expose the metrics port to the GVC.
 metrics:
   enabled: false
+
+# ---------------------------------------------------------------------------
+# Frontend TLS (client -> pooler). Off by default. When enabled, supply a PEM
+# server certificate and private key; they are stored in Control Plane opaque
+# secrets and mounted read-only (the entrypoint installs the key at 0600 as
+# pgAgroal requires). Set mutualTLS to also require and verify client
+# certificates against caCert (verify-ca; the pgAgroal 2.1.0 pooler has no
+# tls_cert_auth_mode key, so verify-full is not available). Backend TLS
+# (pooler -> PostgreSQL) is negotiated by pgAgroal and is not configured here.
+# ---------------------------------------------------------------------------
+tls:
+  enabled: false
+  cert: ""        # PEM server certificate (required when enabled)
+  key: ""         # PEM server private key (required when enabled)
+  mutualTLS: false
+  caCert: ""      # PEM client CA bundle (required when mutualTLS is true)
 
 # ---------------------------------------------------------------------------
 # Client source allow-list (pgAgroal HBA), comma-separated CIDRs, or "all".
