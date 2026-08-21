@@ -25,7 +25,7 @@ to the backend's port, and only the configured pooled user is accepted.
 
 ## Main capabilities
 
-- High-performance connection pooling in front of any PostgreSQL 12+.
+- High-performance connection pooling using the PostgreSQL v3 wire protocol.
 - Stateless and horizontally scalable (independent replicas).
 - Hardened: non-root, dropped capabilities, egress scoped to the backend port,
   pre-registered user only (unknown-user passthrough disabled).
@@ -35,7 +35,8 @@ to the backend's port, and only the configured pooled user is accepted.
 ## Requirements
 
 - An existing PostgreSQL reachable from the GVC.
-- A PostgreSQL role clients pool through (`CONNECT` on the target database).
+- A PostgreSQL role clients pool through (`CONNECT` plus the application-required
+  schema and object privileges).
 - Note: TLS to/from the pooler is not configurable in this version — use on a
   trusted private network path to the backend.
 
@@ -48,9 +49,12 @@ to the backend's port, and only the configured pooled user is accepted.
 
 ## PostgreSQL compatibility
 
-PostgreSQL 12+ (bundles upstream pgagroal 2.1.0). Managed services supported
-(Amazon RDS/Aurora, Azure Database for PostgreSQL, Google Cloud SQL) provided the
-pooler has private network reachability to the backend.
+Use a PostgreSQL major version still supported by the PostgreSQL project. This
+container bundles upstream pgagroal 2.1.0; repository CI currently exercises
+PostgreSQL 17. Managed services (Amazon RDS/Aurora, Azure Database for PostgreSQL,
+Google Cloud SQL) require private network reachability to the backend **and** must
+permit non-TLS client connections, because this container version cannot enable
+backend TLS.
 
 ## Links
 

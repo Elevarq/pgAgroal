@@ -73,8 +73,8 @@ Validation — fail fast on missing/invalid inputs before any resource renders.
 {{- if not (regexMatch "^[0-9]+$" $maxRaw) -}}
 {{- fail "pool.maxConnections must be a positive integer" -}}
 {{- end -}}
-{{- if lt (int $maxRaw) 1 -}}
-{{- fail "pool.maxConnections must be at least 1" -}}
+{{- if or (lt (int $maxRaw) 1) (gt (int $maxRaw) 10000) -}}
+{{- fail "pool.maxConnections must be between 1 and 10000 (pgagroal caps max_connections at 10000)" -}}
 {{- end -}}
 {{- $replicasRaw := .Values.replicas | toString -}}
 {{- if not (regexMatch "^[0-9]+$" $replicasRaw) -}}
@@ -86,6 +86,19 @@ Validation — fail fast on missing/invalid inputs before any resource renders.
 {{- $inboundTypes := list "none" "same-gvc" "same-org" "workload-list" -}}
 {{- if not (has .Values.firewall.internal.inboundAllowType $inboundTypes) -}}
 {{- fail (printf "firewall.internal.inboundAllowType must be one of: %s" (join ", " $inboundTypes)) -}}
+{{- end -}}
+{{- if and (eq .Values.firewall.internal.inboundAllowType "workload-list") (not .Values.firewall.internal.workloads) -}}
+{{- fail "firewall.internal.workloads must be a non-empty list when inboundAllowType is workload-list" -}}
+{{- end -}}
+{{- /* hbaSource is inserted into a pgagroal HBA line; restrict it to `all` or a
+       comma-separated list of CIDRs so it can't inject an auth method (e.g. a
+       whitespace/`#` value could comment out the scram-sha-256 method and leave a
+       `trust` rule). Each trimmed element must be exactly `all` or d.d.d.d/mask. */ -}}
+{{- range $e := splitList "," (.Values.hbaSource | toString) -}}
+{{- $t := trim $e -}}
+{{- if not (regexMatch "^(all|([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2})$" $t) -}}
+{{- fail (printf "hbaSource entry '%s' is invalid; each entry must be `all` or a CIDR (e.g. 10.0.0.0/8). No spaces or other characters are allowed." $t) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
