@@ -23,7 +23,8 @@ The image is pinned by immutable digest
 
 - An existing, reachable PostgreSQL instance (pgAgroal bundles no database).
 - A PostgreSQL role clients will pool through (`auth.username`/`auth.password`) —
-  a normal role with `CONNECT` on the target database(s). pgAgroal only pools; it
+  a role with `CONNECT` on the target database(s) plus the application-required
+  schema and object privileges. pgAgroal only pools; it
   performs no admin/maintenance on the backend.
 
 ## How clients connect

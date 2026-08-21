@@ -11,8 +11,10 @@
 #   PGA-R005  image.repository / image.digest cannot be changed
 #   PGA-R006  required inputs (backend.host/auth.username/auth.password/hbaSource) fail-fast when empty
 #   PGA-R007  logLevel enum; firewall.inboundAllowType enum; metrics.enabled boolean
-#   PGA-R008  integer-shape: backend.port (1..65535), pool.maxConnections (>=1), replicas (>=1)
+#   PGA-R008  integer-shape: backend.port (1..65535), pool.maxConnections (1..10000), replicas (>=1)
 #   PGA-R009  workload is stateless (no volumeset), pooler port 6432/tcp, egress scoped to backend port
+#   PGA-R010  security invariants: unknown-user passthrough off, pgagroal-cli ping probe, metrics off by default
+#   PGA-R011  hbaSource accepts only `all` or CIDRs (no HBA injection); workload-list non-empty
 set -uo pipefail
 
 CHART_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/versions/1.0.0"
@@ -53,6 +55,22 @@ if OUT="$(render)"; then
   else
     fail "R009 egress not scoped to the backend port"
   fi
+  # R010 — security-critical rendered invariants.
+  if echo "$OUT" | grep -A1 'PGAGROAL_ALLOW_UNKNOWN_USERS' | grep -q 'value: "false"'; then
+    pass "R010 unknown-user passthrough disabled"
+  else
+    fail "R010 PGAGROAL_ALLOW_UNKNOWN_USERS is not \"false\""
+  fi
+  if echo "$OUT" | grep -q 'pgagroal-cli' && echo "$OUT" | grep -q 'ping'; then
+    pass "R010 pgagroal-cli ping exec probe present"
+  else
+    fail "R010 pgagroal-cli ping exec probe missing"
+  fi
+  if echo "$OUT" | grep -q 'number: 2346'; then
+    fail "R010 metrics port 2346 exposed by default (should be off)"
+  else
+    pass "R010 metrics port absent by default"
+  fi
 else
   fail "R001 default render failed:"; echo "$OUT" | tail -3
 fi
@@ -82,6 +100,11 @@ neg R008 "maxConnections < 1"        --set pool.maxConnections=0
 neg R008 "fractional maxConnections" --set-json pool.maxConnections=1.5
 neg R008 "replicas < 1"              --set replicas=0
 neg R008 "boolean replicas"          --set replicas=true
+neg R008 "maxConnections > 10000"    --set pool.maxConnections=20000
+neg R011 "hbaSource injects trust"   --set-string hbaSource="all trust #"
+neg R011 "hbaSource with space"      --set-string hbaSource="10.0.0.0/8 trust"
+neg R011 "hbaSource bogus token"     --set-string hbaSource="not-a-cidr"
+neg R011 "workload-list empty"       --set firewall.internal.inboundAllowType=workload-list
 
 echo "== positive opt-ins (must render) =="
 if render --set metrics.enabled=true 2>/dev/null | grep -q 'number: 2346'; then
