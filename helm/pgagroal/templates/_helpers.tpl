@@ -87,8 +87,15 @@ Validate the frontend TLS values (fail closed on typed or unsupported input).
 {{- if not (kindIs "bool" .Values.tls.mutualTLS) }}
 {{- fail "pgagroal: tls.mutualTLS must be a boolean (true or false, not a quoted string)" }}
 {{- end }}
-{{- if and .Values.tls.enabled (empty .Values.tls.existingSecret) }}
+{{- if not (kindIs "string" .Values.tls.existingSecret) }}
+{{- fail "pgagroal: tls.existingSecret must be a string" }}
+{{- end }}
+{{- $tlsSecret := trim .Values.tls.existingSecret }}
+{{- if and .Values.tls.enabled (empty $tlsSecret) }}
 {{- fail "pgagroal: tls.existingSecret is required when tls.enabled is true (a Secret with keys tls.crt, tls.key, and ca.crt for mutual TLS)" }}
+{{- end }}
+{{- if and .Values.tls.enabled (or (gt (len $tlsSecret) 253) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$" $tlsSecret))) }}
+{{- fail "pgagroal: tls.existingSecret must be a valid Kubernetes DNS-1123 subdomain (lowercase alphanumerics, '-' and '.', <= 253 chars)" }}
 {{- end }}
 {{- if and .Values.tls.mutualTLS (not .Values.tls.enabled) }}
 {{- fail "pgagroal: tls.mutualTLS requires tls.enabled=true" }}

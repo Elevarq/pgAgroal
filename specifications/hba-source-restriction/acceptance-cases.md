@@ -81,3 +81,19 @@ any method other than `scram-sha-256`).
 **And Given**: `PGAGROAL_HBA_SOURCE='10.0.0.0/8, all trust #, 192.168.0.0/16'`
 **Then**: exactly two `host` lines are emitted (`10.0.0.0/8`, `192.168.0.0/16`);
 the middle injection entry is dropped.
+
+## AC-09: semantic address/mask validation, no glob or newline bypass
+
+**Spec refs**: R3, I3
+
+**Given**: an entry with an out-of-range octet (`999.999.999.999/24`,
+`256.0.0.0/8`), a non-octet mask (`10.0.0.0/20`, `/33`), a malformed CIDR
+(`10.0.0/8`), a glob metacharacter (`*`, `10.*.0.0/16`), or an embedded newline
+(`all\ntrust #`, `10.0.0.0/8\nfoo`)
+**When**: the HBA file is generated
+**Then**: no `host` line is emitted for it — in particular a `*` never expands to
+filenames and a newline never truncates an entry to a valid prefix such as `all`.
+
+**And Given**: an octet-aligned entry (`10.0.0.0/8`, `192.168.1.0/24`,
+`10.1.2.3/32`, `0.0.0.0/0`, `all`) or a comma-separated list of them
+**Then**: one `host … scram-sha-256` line is emitted per valid entry.

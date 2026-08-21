@@ -28,8 +28,10 @@ Class: feature
 - Reject HBA source-address injection and invalid CIDRs: `build_hba_lines` accepts
   each `PGAGROAL_HBA_SOURCE` entry only if it is `all`, `0.0.0.0/0`, or a valid IPv4
   CIDR with octets 0–255 and an octet-aligned mask (`/8,16,24,32`), dropping any
-  other value with a `%q`-escaped warning; entries are split into an array so a `*`
-  cannot glob to filenames. Previously a crafted value (e.g. `all trust #`) was
+  other value with a `%q`-escaped warning; entries are split on commas only
+  (preserving embedded newlines so `all\ntrust #` is rejected whole rather than
+  truncated to `all`, #111) and never subject to `*` filename globbing. Previously a
+  crafted value (e.g. `all trust #`) was
   inserted verbatim and could comment out the `scram-sha-256` method, leaving a
   no-auth `trust` rule, and out-of-range octets (`999.999.999.999/24`) were passed
   to pgagroal. This enforces the hba-source-restriction spec's `scram-sha-256`-only

@@ -46,6 +46,8 @@ neg "string tls.mutualTLS"      --set tls.enabled=true --set tls.existingSecret=
 neg "enabled, empty secret"     --set tls.enabled=true --set-string tls.existingSecret=
 neg "mutualTLS without enabled" --set tls.mutualTLS=true
 neg "certAuthMode verify-full"  --set tls.enabled=true --set tls.existingSecret=s --set tls.certAuthMode=verify-full
+neg "invalid secret name"       --set tls.enabled=true --set tls.existingSecret=Bad_Name
+neg "whitespace secret name"    --set tls.enabled=true --set-string tls.existingSecret=" "
 
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]

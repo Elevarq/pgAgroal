@@ -10,9 +10,10 @@ Allow operators to enable TLS on the **frontend** connection — the hop between
 clients and the pgagroal pooler — so client↔pooler traffic can be encrypted
 (optionally with client-certificate / mutual TLS). Upstream pgagroal supports
 this in the main `[pgagroal]` section (`tls`, `tls_cert_file`, `tls_key_file`,
-`tls_ca_file`, `tls_cert_auth_mode`); this feature drives those keys from
-environment variables and installs the certificate material with the file
-permissions pgagroal requires.
+`tls_ca_file`); this feature drives those keys from environment variables and
+installs the certificate material with the file permissions pgagroal requires.
+(The pooler section has no `tls_cert_auth_mode` key — that is a pgagroal-*vault*
+setting — so verify-full / CN-SAN matching is not available.)
 
 **Scope: frontend TLS only.** Backend TLS (pooler → PostgreSQL) is upstream-marked
 "Experimental — no pooling" and disabling pooling defeats the product, so it is
