@@ -112,6 +112,14 @@ done
 # A glob metacharacter must not expand to filenames (unquoted-expansion guard).
 out="$(cd / && PGAGROAL_HBA_SOURCE='*' build_hba_lines 2>/dev/null)"
 check "AC-09 '*' does not glob to files" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+# A newline must not truncate an entry to a valid prefix (e.g. `all\ntrust #`).
+out="$(PGAGROAL_HBA_SOURCE=$'all\ntrust #' build_hba_lines 2>/dev/null)"
+check "AC-09 newline cannot truncate to valid all" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+out="$(PGAGROAL_HBA_SOURCE=$'10.0.0.0/8\nfoo' build_hba_lines 2>/dev/null)"
+check "AC-09 newline after valid CIDR rejects whole entry" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+# Comma splitting still works across newlined-but-valid multi-entry input.
+out="$(PGAGROAL_HBA_SOURCE='10.0.0.0/8,192.168.0.0/16' build_hba_lines 2>/dev/null)"
+check "AC-09 comma split still yields both CIDRs" "2" "$(printf '%s\n' "${out}" | grep -c '^host')"
 
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]

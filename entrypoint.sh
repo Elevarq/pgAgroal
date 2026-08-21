@@ -44,13 +44,13 @@ build_hba_lines() {
     # (spec invariant I3).
     local octet='(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
     local re="^(all|0\.0\.0\.0/0|${octet}\.${octet}\.${octet}\.${octet}/(8|16|24|32))$"
-    # Split on comma into an array so the values are never subject to pathname
-    # globbing or IFS word-splitting (an entry of `*` must not expand to files).
-    local entries=()
-    local IFS=','
-    read -r -a entries <<< "${sources}"
-    for cidr in "${entries[@]}"; do
-        # Trim surrounding whitespace.
+    # Split ONLY on commas. `read -d ','` (unlike line-oriented `read -a`) keeps
+    # any embedded newline inside the entry, so a value like `all\ntrust #` is
+    # rejected as a whole rather than truncated to a bare `all`. The quoted
+    # expansion prevents pathname globbing (an entry of `*` must not expand to
+    # files). The trailing comma guarantees the last entry is read.
+    while IFS= read -r -d ',' cidr; do
+        # Trim surrounding whitespace (including newlines) at the edges only.
         cidr="${cidr#"${cidr%%[![:space:]]*}"}"
         cidr="${cidr%"${cidr##*[![:space:]]}"}"
         [ -z "${cidr}" ] && continue
@@ -59,7 +59,7 @@ build_hba_lines() {
             continue
         fi
         printf 'host    all       all   %s   scram-sha-256\n' "${cidr}"
-    done
+    done <<< "${sources},"
 }
 
 # ── Frontend TLS (client ↔ pooler), spec: specifications/tls-frontend ─────────
