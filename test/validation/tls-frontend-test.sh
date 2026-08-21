@@ -73,8 +73,8 @@ check "AC-05 verify-full" "1" "$(printf '%s\n' "$out" | grep -c '^tls_cert_auth_
 
 # AC-06: install key at 0600, cert at 0644.
 PGAGROAL_TLS=on PGAGROAL_TLS_CERT_FILE="${src}/tls.crt" PGAGROAL_TLS_KEY_FILE="${src}/tls.key" PGAGROAL_TLS_CA_FILE='' install_tls_material
-check "AC-06 key is 0600"  "600"  "$(stat -f '%Lp' "${TLS_DIR}/server.key" 2>/dev/null || stat -c '%a' "${TLS_DIR}/server.key")"
-check "AC-06 cert is 0644" "644"  "$(stat -f '%Lp' "${TLS_DIR}/server.crt" 2>/dev/null || stat -c '%a' "${TLS_DIR}/server.crt")"
+check "AC-06 key is 0600"  "600"  "$(stat -c '%a' "${TLS_DIR}/server.key" 2>/dev/null || stat -f '%Lp' "${TLS_DIR}/server.key")"
+check "AC-06 cert is 0644" "644"  "$(stat -c '%a' "${TLS_DIR}/server.crt" 2>/dev/null || stat -f '%Lp' "${TLS_DIR}/server.crt")"
 
 # AC-07: fail closed on missing key.
 if PGAGROAL_TLS=on PGAGROAL_TLS_CERT_FILE="${src}/tls.crt" PGAGROAL_TLS_KEY_FILE="${WORK}/nope.key" PGAGROAL_TLS_CA_FILE='' install_tls_material 2>/dev/null; then r=0; else r=1; fi
