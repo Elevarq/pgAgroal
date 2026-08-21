@@ -30,21 +30,23 @@ entrypoint and exercises `tls_enabled` + `build_tls_lines` + `install_tls_materi
 **Then**: output has `tls = on`, `tls_cert_file = <dir>/server.crt`,
 `tls_key_file = <dir>/server.key`, and no `tls_ca_file` / `tls_cert_auth_mode`.
 
-## AC-04: cert + key + CA (mutual TLS)
+## AC-04: cert + key + CA (mutual TLS) — no auth-mode key
 
 **Spec refs**: B3, R2
 
-**Given**: TLS on with cert + key + CA and `PGAGROAL_TLS_CERT_AUTH_MODE` unset
+**Given**: TLS on with cert + key + CA
 **When**: `build_tls_lines` runs
-**Then**: output additionally has `tls_ca_file = <dir>/ca.crt` and
-`tls_cert_auth_mode = verify-ca` (the default).
+**Then**: output additionally has `tls_ca_file = <dir>/ca.crt` and **never**
+`tls_cert_auth_mode` (the pooler has no such key).
 
-## AC-05: verify-full honored
+## AC-05: verify-full is rejected
 
-**Spec refs**: R2
+**Spec refs**: B7, R2
 
 **Given**: TLS on with CA and `PGAGROAL_TLS_CERT_AUTH_MODE=verify-full`
-**Then**: `build_tls_lines` emits `tls_cert_auth_mode = verify-full`.
+**When**: `build_tls_lines` runs
+**Then**: it returns non-zero (verify-full is unsupported by the pgagroal 2.1.0
+pooler) and emits no config.
 
 ## AC-06: key installed at 0600
 
@@ -78,3 +80,30 @@ entrypoint and exercises `tls_enabled` + `build_tls_lines` + `install_tls_materi
 **When**: `pgagroal.conf.template` is rendered with `envsubst`
 **Then**: the `[pgagroal]` section contains the `tls = on` block and the `[primary]`
 section is unchanged.
+
+## AC-10: fail closed on an unknown `PGAGROAL_TLS` value
+
+**Spec refs**: B6, R1
+
+**Given**: `PGAGROAL_TLS` set to a typo (`tru`, `enabled`, `on ` …)
+**When**: `validate_tls_setting` runs
+**Then**: it returns non-zero (known enable/disable values pass); the entrypoint
+never starts a plaintext listener for a typo.
+
+## AC-11: cert-auth-mode without a CA is rejected
+
+**Spec refs**: B7
+
+**Given**: `PGAGROAL_TLS_CERT_AUTH_MODE` set with no `PGAGROAL_TLS_CA_FILE`
+**When**: `validate_tls_setting` runs
+**Then**: it returns non-zero.
+
+## AC-12: Helm wires TLS (not just env)
+
+**Spec refs**: Constraints/NFR
+
+**Given**: `helm template` with `tls.enabled=true` + `tls.existingSecret`
+**When**: the chart renders
+**Then**: the ConfigMap carries `${PGAGROAL_TLS_LINES}`; the Deployment sets
+`PGAGROAL_TLS`, the cert/key env, mounts the Secret at `/etc/pgagroal/tls-src`, and
+adds the Secret volume. Verified by `test/validation/helm-tls-render-test.sh`.

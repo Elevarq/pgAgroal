@@ -275,7 +275,7 @@ make security              # local security, Helm, SBOM, and vulnerability gate
 | `PGAGROAL_TLS_CERT_FILE` / (Secret `tls.crt`) | — | Server certificate (PEM). Required when TLS is enabled. |
 | `PGAGROAL_TLS_KEY_FILE` / (Secret `tls.key`) | — | Server private key (PEM). Required when TLS is enabled; installed at mode `0600`. |
 | `PGAGROAL_TLS_CA_FILE` / (Secret `ca.crt`) | — | CA bundle for client-certificate (mutual) TLS. Optional. |
-| `PGAGROAL_TLS_CERT_AUTH_MODE` / `tls.certAuthMode` | `verify-ca` | With a CA: `verify-ca` or `verify-full`. |
+| `PGAGROAL_TLS_CERT_AUTH_MODE` / `tls.certAuthMode` | `verify-ca` | Only `verify-ca` is supported. The pooler has no `tls_cert_auth_mode` key, so `verify-full`/CN-SAN matching is unavailable and is rejected. |
 
 ### Frontend TLS
 
@@ -300,6 +300,11 @@ tls:
 > pgagroal marks server-section TLS experimental and enabling it disables pooling, so
 > use a trusted private network path (or a TLS-terminating sidecar) to the backend.
 
+The entrypoint copies the cert/key into a writable directory at startup (to enforce
+the `0600` key permission pgagroal requires), so **rotating the Secret does not take
+effect until the pod restarts** — run `kubectl rollout restart deploy/<release>-pgagroal`
+after updating the certificate.
+
 Spec: `specifications/tls-frontend/`.
 
 ### Source-address restriction (HBA)
@@ -315,11 +320,13 @@ matching source must still present SCRAM credentials. This is defence in
 depth: the backend PostgreSQL still authenticates every user.
 
 > pgagroal matches HBA CIDRs on **octet boundaries only** (`/8`, `/16`,
-> `/24` — not `/12`), so the default expresses `172.16.0.0/12` as its
-> sixteen `/16` blocks. If your pod network is outside RFC1918 (e.g. an
-> EKS cluster using the `100.64.0.0/10` secondary CIDR), set
-> `PGAGROAL_HBA_SOURCE` to that CIDR, or to `all` and rely on the
-> NetworkPolicy.
+> `/24`, `/32` — not `/12` or `/10`), so the default expresses `172.16.0.0/12`
+> as its sixteen `/16` blocks, and only these octet-aligned masks are accepted.
+> If your pod network is outside RFC1918 and non-octet-aligned (e.g. an EKS
+> cluster using the `100.64.0.0/10` secondary CIDR — pgagroal would treat that
+> as just `100.64.0.0/16`), set `PGAGROAL_HBA_SOURCE=all` and rely on the
+> NetworkPolicy, or enumerate the octet-aligned `/16` blocks
+> (`100.64.0.0/16` … `100.127.0.0/16`).
 
 In Kubernetes, the `pgagroal.host: "*"` bind is backed by the chart's
 [`NetworkPolicy`](#networkpolicy-enabled-by-default) (enabled by default). The

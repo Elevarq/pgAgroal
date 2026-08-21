@@ -62,14 +62,16 @@ check "AC-03 key file"        "1" "$(printf '%s\n' "$out" | grep -c 'server.key$
 check "AC-03 no ca line"      "0" "$(printf '%s\n' "$out" | grep -c 'tls_ca_file')"
 check "AC-03 no auth mode"    "0" "$(printf '%s\n' "$out" | grep -c 'tls_cert_auth_mode')"
 
-# AC-04: cert + key + CA, default auth mode verify-ca.
+# AC-04: cert + key + CA (mutual TLS). The pooler has no tls_cert_auth_mode key
+# (that is a vault setting), so only tls_ca_file is emitted — never
+# tls_cert_auth_mode.
 out="$(PGAGROAL_TLS=on PGAGROAL_TLS_CA_FILE="${src}/ca.crt" build_tls_lines)"
 check "AC-04 ca line"         "1" "$(printf '%s\n' "$out" | grep -c 'tls_ca_file = .*ca.crt$')"
-check "AC-04 default verify-ca" "1" "$(printf '%s\n' "$out" | grep -c '^tls_cert_auth_mode = verify-ca$')"
+check "AC-04 no tls_cert_auth_mode emitted" "0" "$(printf '%s\n' "$out" | grep -c 'tls_cert_auth_mode')"
 
-# AC-05: verify-full honored.
-out="$(PGAGROAL_TLS=on PGAGROAL_TLS_CA_FILE="${src}/ca.crt" PGAGROAL_TLS_CERT_AUTH_MODE=verify-full build_tls_lines)"
-check "AC-05 verify-full" "1" "$(printf '%s\n' "$out" | grep -c '^tls_cert_auth_mode = verify-full$')"
+# AC-05: verify-full is rejected (unsupported by the pgagroal 2.1.0 pooler).
+if PGAGROAL_TLS=on PGAGROAL_TLS_CA_FILE="${src}/ca.crt" PGAGROAL_TLS_CERT_AUTH_MODE=verify-full build_tls_lines >/dev/null 2>&1; then r=0; else r=1; fi
+check "AC-05 verify-full rejected" "1" "$r"
 
 # AC-06: install key at 0600, cert at 0644.
 PGAGROAL_TLS=on PGAGROAL_TLS_CERT_FILE="${src}/tls.crt" PGAGROAL_TLS_KEY_FILE="${src}/tls.key" PGAGROAL_TLS_CA_FILE='' install_tls_material
@@ -93,6 +95,20 @@ PGAGROAL_LOG_LEVEL='info' PGAGROAL_ALLOW_UNKNOWN_USERS='false' \
 check "AC-09 tls=on rendered" "1" "$(grep -c '^tls = on$' "${WORK}/on.conf")"
 check "AC-09 tls before [primary]" "1" "$(awk '/^tls = on$/{t=NR} /^\[primary\]$/{p=NR} END{print (t>0 && t<p)?1:0}' "${WORK}/on.conf")"
 check "AC-09 [primary] host intact" "1" "$(grep -c '^host = pg$' "${WORK}/on.conf")"
+
+# AC-10: fail closed on an unknown PGAGROAL_TLS value (typo) — never plaintext.
+for v in on true 1 yes off false 0 no; do
+  if PGAGROAL_TLS="$v" PGAGROAL_TLS_CERT_AUTH_MODE='' PGAGROAL_TLS_CA_FILE='' validate_tls_setting 2>/dev/null; then r=0; else r=1; fi
+  check "AC-10 known '$v' accepted" "0" "$r"
+done
+for v in tru enabled "on " maybe; do
+  if PGAGROAL_TLS="$v" PGAGROAL_TLS_CERT_AUTH_MODE='' PGAGROAL_TLS_CA_FILE='' validate_tls_setting 2>/dev/null; then r=0; else r=1; fi
+  check "AC-10 typo '$v' rejected" "1" "$r"
+done
+
+# AC-11: cert-auth-mode without a CA is rejected.
+if PGAGROAL_TLS=on PGAGROAL_TLS_CA_FILE='' PGAGROAL_TLS_CERT_AUTH_MODE=verify-ca validate_tls_setting 2>/dev/null; then r=0; else r=1; fi
+check "AC-11 auth mode without CA rejected" "1" "$r"
 
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]

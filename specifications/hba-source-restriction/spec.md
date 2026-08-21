@@ -72,10 +72,15 @@ private subnets) without breaking them.
   always `scram-sha-256`.
 - **R2** — `allow_unknown_users` in the rendered `pgagroal.conf` equals the
   value of `PGAGROAL_ALLOW_UNKNOWN_USERS`, which defaults to `false`.
-- **R3** — Each `PGAGROAL_HBA_SOURCE` entry (after trimming) is accepted only if
-  it matches `^(all|d.d.d.d/mask)$`; any other entry is dropped with a warning and
-  produces no HBA line. This makes R1's `scram-sha-256`-only guarantee hold for
-  every possible input.
+- **R3** — Each `PGAGROAL_HBA_SOURCE` entry (after trimming) is accepted only if it
+  is exactly `all`, `0.0.0.0/0`, or a syntactically valid IPv4 CIDR whose octets are
+  0–255 and whose mask is octet-aligned (`/8`, `/16`, `/24`, `/32` — the masks
+  pgagroal actually matches). Any other entry — out-of-range octets, non-octet
+  masks, or injection/glob metacharacters — is dropped with a warning and produces
+  no HBA line. Entries are split on comma into an array (never subject to pathname
+  globbing), and rejected values are logged with `%q`. This makes R1's
+  `scram-sha-256`-only guarantee hold for every possible input, and keeps pgagroal
+  from being fed an address its `inet_pton()` rejects.
 
 ## Invariants
 

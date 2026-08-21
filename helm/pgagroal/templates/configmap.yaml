@@ -28,7 +28,7 @@ data:
 
     metrics = {{ .Values.metrics.port }}
     {{- end }}
-
+    ${PGAGROAL_TLS_LINES}
     [primary]
     host = ${PG_BACKEND_HOST}
     port = ${PG_BACKEND_PORT}
