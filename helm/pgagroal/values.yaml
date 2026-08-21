@@ -88,6 +88,25 @@ credentials:
   existingSecret: "pgagroal-pg-credentials"
 
 # ---------------------------------------------------------------------------
+# Frontend TLS (client <-> pooler). Off by default. When enabled, reference an
+# existing Secret containing tls.crt + tls.key (and ca.crt for mutual TLS); the
+# entrypoint installs the key at mode 0600 as pgagroal requires. TLS uses the
+# existing pooler port (no new port). Backend TLS (pooler -> PostgreSQL) is not
+# configured here (upstream marks it experimental and it disables pooling).
+# ---------------------------------------------------------------------------
+tls:
+  # -- Enable frontend TLS.
+  enabled: false
+  # -- Name of an existing Secret with keys tls.crt and tls.key (and ca.crt when
+  # mutualTLS is true). Create it from your own certificate before installing.
+  existingSecret: "pgagroal-tls"
+  # -- Require client certificates (mutual TLS); needs ca.crt in the Secret.
+  mutualTLS: false
+  # -- Client-certificate verification mode when mutualTLS is true.
+  # verify-ca | verify-full
+  certAuthMode: verify-ca
+
+# ---------------------------------------------------------------------------
 # Kubernetes Service
 # ---------------------------------------------------------------------------
 service:

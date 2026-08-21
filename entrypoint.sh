@@ -54,6 +54,70 @@ build_hba_lines() {
     done
 }
 
+# ── Frontend TLS (client ↔ pooler), spec: specifications/tls-frontend ─────────
+# TLS_DIR is the writable location the entrypoint installs certificate material
+# into (pgagroal requires the private key at mode 0600, which read-only secret
+# mounts cannot guarantee, so we copy + chmod rather than reference the mount).
+TLS_DIR="${CONF_DIR:-/etc/pgagroal}/tls"
+
+# tls_enabled succeeds when PGAGROAL_TLS is a truthy value (on/true/1/yes,
+# case-insensitive). Anything else — including unset — disables TLS.
+tls_enabled() {
+    case "$(printf '%s' "${PGAGROAL_TLS:-off}" | tr '[:upper:]' '[:lower:]')" in
+        on|true|1|yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# install_tls_material copies the operator-supplied cert/key (and optional CA)
+# into TLS_DIR with the permissions pgagroal requires: key 0600, cert/CA 0644.
+# Fails closed (non-zero) if TLS is enabled but the cert or key is missing or
+# unreadable, before pgagroal is started.
+install_tls_material() {
+    tls_enabled || return 0
+    local cert="${PGAGROAL_TLS_CERT_FILE:-}"
+    local key="${PGAGROAL_TLS_KEY_FILE:-}"
+    local ca="${PGAGROAL_TLS_CA_FILE:-}"
+    if [ -z "${cert}" ] || [ ! -r "${cert}" ]; then
+        echo "Error: PGAGROAL_TLS is enabled but PGAGROAL_TLS_CERT_FILE ('${cert}') is missing or unreadable" >&2
+        return 1
+    fi
+    if [ -z "${key}" ] || [ ! -r "${key}" ]; then
+        echo "Error: PGAGROAL_TLS is enabled but PGAGROAL_TLS_KEY_FILE ('${key}') is missing or unreadable" >&2
+        return 1
+    fi
+    mkdir -p "${TLS_DIR}"
+    install -m 0644 "${cert}" "${TLS_DIR}/server.crt"
+    install -m 0600 "${key}" "${TLS_DIR}/server.key"
+    if [ -n "${ca}" ]; then
+        if [ ! -r "${ca}" ]; then
+            echo "Error: PGAGROAL_TLS_CA_FILE ('${ca}') is set but unreadable" >&2
+            return 1
+        fi
+        install -m 0644 "${ca}" "${TLS_DIR}/ca.crt"
+    fi
+}
+
+# build_tls_lines emits the pgagroal.conf [pgagroal]-section TLS keys when TLS is
+# enabled, pointing at the installed paths, and nothing when TLS is disabled.
+# tls_cert_auth_mode is emitted only with a CA, and validated to verify-ca /
+# verify-full (returns non-zero on an invalid mode → fail closed).
+build_tls_lines() {
+    tls_enabled || return 0
+    printf 'tls = on\n'
+    printf 'tls_cert_file = %s\n' "${TLS_DIR}/server.crt"
+    printf 'tls_key_file = %s\n' "${TLS_DIR}/server.key"
+    if [ -n "${PGAGROAL_TLS_CA_FILE:-}" ]; then
+        local mode="${PGAGROAL_TLS_CERT_AUTH_MODE:-verify-ca}"
+        case "${mode}" in
+            verify-ca|verify-full) ;;
+            *) echo "Error: PGAGROAL_TLS_CERT_AUTH_MODE must be verify-ca or verify-full (got '${mode}')" >&2; return 1 ;;
+        esac
+        printf 'tls_ca_file = %s\n' "${TLS_DIR}/ca.crt"
+        printf 'tls_cert_auth_mode = %s\n' "${mode}"
+    fi
+}
+
 main() {
     local conf_file="${CONF_DIR}/pgagroal.conf"
     local hba_file="${CONF_DIR}/pgagroal_hba.conf"
@@ -72,6 +136,15 @@ main() {
     # (unknown users forwarded to the backend for authentication); with the
     # default false, every user must be pre-registered with pgagroal.
     export PGAGROAL_ALLOW_UNKNOWN_USERS="${PGAGROAL_ALLOW_UNKNOWN_USERS:-false}"
+
+    # ── Frontend TLS (spec: specifications/tls-frontend) ──────────────────
+    # Install cert/key material (fails closed if enabled but missing) and build
+    # the [pgagroal]-section TLS lines before rendering. Empty when TLS is off,
+    # so the rendered config is unchanged for non-TLS deployments.
+    export PGAGROAL_TLS="${PGAGROAL_TLS:-off}"
+    install_tls_material
+    PGAGROAL_TLS_LINES="$(build_tls_lines)"
+    export PGAGROAL_TLS_LINES
 
     envsubst < "${CONF_DIR}/pgagroal.conf.template" > "${conf_file}"
 

@@ -271,6 +271,36 @@ make security              # local security, Helm, SBOM, and vulnerability gate
 | `PGAGROAL_LOG_LEVEL` / `pgagroal.logLevel` | `info` | Log level |
 | `PGAGROAL_HBA_SOURCE` / `pgagroal.hbaSource` | RFC1918 (octet-aligned) | Comma-separated CIDR allowlist of accepted **source** addresses, rendered with `scram-sha-256` auth. Default = RFC1918 private ranges, so an accidentally-exposed pooler rejects public sources. Set to `all` for any source (legacy), or tighten to your client CIDR. |
 | `PGAGROAL_ALLOW_UNKNOWN_USERS` / `pgagroal.allowUnknownUsers` | `false` | Hardened default: unknown users are **not** passed through to the backend. Set `true` to restore transparent pooling (the backend is then the sole auth gate). |
+| `PGAGROAL_TLS` / `tls.enabled` | `off` | Enable frontend TLS (client ↔ pooler). See [Frontend TLS](#frontend-tls). |
+| `PGAGROAL_TLS_CERT_FILE` / (Secret `tls.crt`) | — | Server certificate (PEM). Required when TLS is enabled. |
+| `PGAGROAL_TLS_KEY_FILE` / (Secret `tls.key`) | — | Server private key (PEM). Required when TLS is enabled; installed at mode `0600`. |
+| `PGAGROAL_TLS_CA_FILE` / (Secret `ca.crt`) | — | CA bundle for client-certificate (mutual) TLS. Optional. |
+| `PGAGROAL_TLS_CERT_AUTH_MODE` / `tls.certAuthMode` | `verify-ca` | With a CA: `verify-ca` or `verify-full`. |
+
+### Frontend TLS
+
+Set `PGAGROAL_TLS=on` (Helm: `tls.enabled=true`) and provide a server certificate
+and key to encrypt the client ↔ pooler connection. The entrypoint installs the
+material under `/etc/pgagroal/tls/` with the private key at mode `0600` (pgagroal
+rejects looser permissions) and **fails closed** if the cert or key is missing.
+Provide a CA (`PGAGROAL_TLS_CA_FILE` / Secret key `ca.crt`, Helm `tls.mutualTLS=true`)
+to require client certificates. TLS uses the existing pooler port — no new port.
+
+In Kubernetes, reference an existing Secret with keys `tls.crt` + `tls.key` (and
+`ca.crt` for mutual TLS):
+
+```yaml
+tls:
+  enabled: true
+  existingSecret: my-pgagroal-tls   # kubectl create secret tls my-pgagroal-tls --cert=… --key=…
+  mutualTLS: false
+```
+
+> **Backend TLS (pooler → PostgreSQL) is not configured by this container.** Upstream
+> pgagroal marks server-section TLS experimental and enabling it disables pooling, so
+> use a trusted private network path (or a TLS-terminating sidecar) to the backend.
+
+Spec: `specifications/tls-frontend/`.
 
 ### Source-address restriction (HBA)
 

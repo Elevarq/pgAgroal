@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Class: security
+Class: feature
+
+### Added
+
+- Frontend TLS (client <-> pooler): set `PGAGROAL_TLS=on` with
+  `PGAGROAL_TLS_CERT_FILE` / `PGAGROAL_TLS_KEY_FILE` (and
+  `PGAGROAL_TLS_CA_FILE` + `PGAGROAL_TLS_CERT_AUTH_MODE` for mutual TLS) to
+  encrypt client connections. The entrypoint installs the key at mode `0600` as
+  pgagroal requires and fails closed if the material is missing. The Helm chart
+  exposes this via `tls.enabled` + `tls.existingSecret` (keys `tls.crt`/`tls.key`,
+  and `ca.crt` when `tls.mutualTLS`). No new port. Backend TLS (pooler ->
+  PostgreSQL) remains out of scope — upstream marks it experimental and it
+  disables pooling (#103).
 
 ### Security
 
