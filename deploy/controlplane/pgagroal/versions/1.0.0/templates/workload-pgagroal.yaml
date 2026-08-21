@@ -49,6 +49,34 @@ spec:
           value: {{ .Values.auth.username | quote }}
         - name: PG_PASSWORD
           value: 'cpln://secret/{{ include "pgagroal.credentials.name" . }}.pg-password'
+        {{- if .Values.tls.enabled }}
+        # --- Frontend TLS (client -> pooler). Cert/key are mounted from opaque
+        # secrets; the entrypoint installs the key at 0600 as pgagroal requires. ---
+        - name: PGAGROAL_TLS
+          value: "on"
+        - name: PGAGROAL_TLS_CERT_FILE
+          value: /etc/pgagroal/tls-src/tls.crt
+        - name: PGAGROAL_TLS_KEY_FILE
+          value: /etc/pgagroal/tls-src/tls.key
+        {{- if .Values.tls.mutualTLS }}
+        - name: PGAGROAL_TLS_CA_FILE
+          value: /etc/pgagroal/tls-src/ca.crt
+        {{- end }}
+        {{- end }}
+      {{- if .Values.tls.enabled }}
+      volumes:
+        - path: /etc/pgagroal/tls-src/tls.crt
+          recoveryPolicy: retain
+          uri: cpln://secret/{{ include "pgagroal.tls.cert.name" . }}.payload
+        - path: /etc/pgagroal/tls-src/tls.key
+          recoveryPolicy: retain
+          uri: cpln://secret/{{ include "pgagroal.tls.key.name" . }}.payload
+        {{- if .Values.tls.mutualTLS }}
+        - path: /etc/pgagroal/tls-src/ca.crt
+          recoveryPolicy: retain
+          uri: cpln://secret/{{ include "pgagroal.tls.ca.name" . }}.payload
+        {{- end }}
+      {{- end }}
       # pgagroal-cli ping is the canonical daemon health check (matches the image
       # HEALTHCHECK); it verifies the pooler is up, not backend connectivity.
       readinessProbe:

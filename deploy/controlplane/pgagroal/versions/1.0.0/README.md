@@ -16,7 +16,7 @@ of backend connections — cutting connection overhead and latency. It is
 | `identity` + `policy` | Least-privilege `reveal` access to the secret |
 
 The image is pinned by immutable digest
-(`ghcr.io/elevarq/pgagroal@sha256:749e3afc…`, the `1.4.4` multi-arch index —
+(`ghcr.io/elevarq/pgagroal@sha256:36017745…`, the `1.4.5` multi-arch index —
 `linux/amd64` + `linux/arm64`, cosign-signed).
 
 ## Prerequisites
@@ -54,6 +54,10 @@ Only the pre-registered `auth.username` is accepted (unknown users are rejected)
 | `replicas` | `1` | Independent pooler instances (stateless) |
 | `logLevel` | `info` | `fatal`\|`error`\|`warn`\|`info`\|`debug1`..`debug5`\|`trace` |
 | `metrics.enabled` | `false` | Expose pgAgroal Prometheus `/metrics` on `:2346` (unauthenticated) |
+| `tls.enabled` | `false` | Frontend TLS (client → pooler) — see Frontend TLS |
+| `tls.cert` / `tls.key` | `""` | PEM server certificate / private key (required when `tls.enabled`) |
+| `tls.mutualTLS` | `false` | Also require and verify client certificates (verify-ca) |
+| `tls.caCert` | `""` | PEM client CA bundle (required when `tls.mutualTLS`) |
 | `hbaSource` | `all` | Client source allow-list (CIDRs or `all`) — see Notes |
 | `resources.cpu` / `resources.memory` | `100m` / `128Mi` | Scale memory with `maxConnections` |
 | `firewall.external.outboundAllowCIDR` | `[0.0.0.0/0]` | Egress to the backend (egress is also port-scoped to `backend.port`); narrow to the DB CIDR if stable |
@@ -66,12 +70,37 @@ Only the pre-registered `auth.username` is accepted (unknown users are rejected)
 - **End to end:** connect a client to `:6432` with `auth.username`/`auth.password`
   and run a query — it is proxied to the backend.
 
+## Frontend TLS
+
+Client → pooler TLS is off by default. To enable it, supply a PEM server
+certificate and private key:
+
+```
+tls.enabled = true
+tls.cert    = <PEM server certificate>
+tls.key     = <PEM server private key>
+```
+
+The certificate and key are stored in Control Plane **opaque secrets**, revealed
+only to the pgAgroal identity and mounted read-only; the entrypoint installs the
+key at `0600` as pgAgroal requires. Clients then connect to `:6432` with
+`sslmode=require` (or `verify-ca`/`verify-full` against your own CA).
+
+For **mutual TLS** (require and verify client certificates), also set:
+
+```
+tls.mutualTLS = true
+tls.caCert    = <PEM CA bundle that signed the client certificates>
+```
+
+Client-certificate checking is `verify-ca` (the certificate must chain to
+`tls.caCert`); the pgAgroal 2.1.0 pooler has no `tls_cert_auth_mode` key, so
+`verify-full`-style CN/SAN matching at the pooler is not available. Backend TLS
+(pooler → PostgreSQL) is negotiated by pgAgroal from the backend host and is not
+configured by this template.
+
 ## Notes & limitations
 
-- **TLS is not configurable in this version.** pgAgroal↔backend and client↔pgAgroal
-  TLS are not exposed by this container (frontend TLS is on the upstream roadmap).
-  Use this where the pooler↔backend path is a trusted private network. If your
-  PostgreSQL requires TLS from clients, this pooler is not yet suitable.
 - **`hbaSource` defaults to `all`.** Network access to `:6432` is already restricted
   to the same GVC by the workload firewall (`firewall.internal.inboundAllowType`),
   which is the network gate. pgAgroal's HBA CIDR matching is octet-boundary-only and

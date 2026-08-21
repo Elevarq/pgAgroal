@@ -11,3 +11,10 @@ bindings:
 targetKind: secret
 targetLinks:
   - //secret/{{ include "pgagroal.credentials.name" . }}
+  {{- if .Values.tls.enabled }}
+  - //secret/{{ include "pgagroal.tls.cert.name" . }}
+  - //secret/{{ include "pgagroal.tls.key.name" . }}
+  {{- if .Values.tls.mutualTLS }}
+  - //secret/{{ include "pgagroal.tls.ca.name" . }}
+  {{- end }}
+  {{- end }}
