@@ -394,7 +394,7 @@ image:
 Verify the pinned image before rolling out:
 
 ```bash
-cosign verify elevarq/pgagroal:1.4.4 \
+cosign verify elevarq/pgagroal:1.4.5 \
   --certificate-identity-regexp "https://github.com/Elevarq/pgAgroal/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
