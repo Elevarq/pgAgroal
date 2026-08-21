@@ -33,12 +33,23 @@ DEFAULT_HBA_SOURCE="10.0.0.0/8,172.16.0.0/16,172.17.0.0/16,172.18.0.0/16,172.19.
 build_hba_lines() {
     local sources="${PGAGROAL_HBA_SOURCE:-${DEFAULT_HBA_SOURCE}}"
     local cidr
+    # Each entry must be exactly `all` or a CIDR. Validating this closes an
+    # injection: a value containing whitespace or `#` would otherwise be inserted
+    # verbatim into the HBA line and could add fields or comment out the method
+    # (e.g. `all trust #` -> `host all all all trust #  scram-sha-256`, which
+    # pgagroal reads as a no-auth `trust` rule). Invalid entries are dropped so
+    # the generated method stays scram-sha-256 (spec invariant I3).
+    local re='^(all|([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2})$'
     local IFS=','
     for cidr in ${sources}; do
         # Trim surrounding whitespace.
         cidr="${cidr#"${cidr%%[![:space:]]*}"}"
         cidr="${cidr%"${cidr##*[![:space:]]}"}"
         [ -z "${cidr}" ] && continue
+        if [[ ! "${cidr}" =~ $re ]]; then
+            echo "Warning: ignoring invalid PGAGROAL_HBA_SOURCE entry '${cidr}' (must be 'all' or a CIDR)" >&2
+            continue
+        fi
         printf 'host    all       all   %s   scram-sha-256\n' "${cidr}"
     done
 }
