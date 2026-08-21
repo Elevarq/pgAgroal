@@ -12,23 +12,28 @@ Class: feature
 ### Added
 
 - Frontend TLS (client <-> pooler): set `PGAGROAL_TLS=on` with
-  `PGAGROAL_TLS_CERT_FILE` / `PGAGROAL_TLS_KEY_FILE` (and
-  `PGAGROAL_TLS_CA_FILE` + `PGAGROAL_TLS_CERT_AUTH_MODE` for mutual TLS) to
-  encrypt client connections. The entrypoint installs the key at mode `0600` as
-  pgagroal requires and fails closed if the material is missing. The Helm chart
-  exposes this via `tls.enabled` + `tls.existingSecret` (keys `tls.crt`/`tls.key`,
-  and `ca.crt` when `tls.mutualTLS`). No new port. Backend TLS (pooler ->
-  PostgreSQL) remains out of scope — upstream marks it experimental and it
-  disables pooling (#103).
+  `PGAGROAL_TLS_CERT_FILE` / `PGAGROAL_TLS_KEY_FILE` (and `PGAGROAL_TLS_CA_FILE`
+  for mutual TLS) to encrypt client connections. The entrypoint installs the key
+  at mode `0600` as pgagroal requires and fails closed if the material is missing
+  or the switch value is a typo. The Helm chart exposes this via `tls.enabled` +
+  `tls.existingSecret` (keys `tls.crt`/`tls.key`, and `ca.crt` when
+  `tls.mutualTLS`), and validates the values. Only `verify-ca`
+  client-certificate checking is available — the pgagroal 2.1.0 pooler has no
+  `tls_cert_auth_mode` key, so `verify-full` is rejected. No new port. Backend TLS
+  (pooler -> PostgreSQL) remains out of scope — upstream marks it experimental and
+  it disables pooling (#103, hardened #109).
 
 ### Security
 
-- Reject HBA source-address injection: `build_hba_lines` now accepts each
-  `PGAGROAL_HBA_SOURCE` entry only if it is exactly `all` or a CIDR, dropping any
-  other value with a warning. Previously a crafted value (e.g. `all trust #`) was
-  inserted verbatim into the HBA line and could comment out the `scram-sha-256`
-  method, leaving a no-auth `trust` rule. This enforces the hba-source-restriction
-  spec's `scram-sha-256`-only invariant for every input (#105).
+- Reject HBA source-address injection and invalid CIDRs: `build_hba_lines` accepts
+  each `PGAGROAL_HBA_SOURCE` entry only if it is `all`, `0.0.0.0/0`, or a valid IPv4
+  CIDR with octets 0–255 and an octet-aligned mask (`/8,16,24,32`), dropping any
+  other value with a `%q`-escaped warning; entries are split into an array so a `*`
+  cannot glob to filenames. Previously a crafted value (e.g. `all trust #`) was
+  inserted verbatim and could comment out the `scram-sha-256` method, leaving a
+  no-auth `trust` rule, and out-of-range octets (`999.999.999.999/24`) were passed
+  to pgagroal. This enforces the hba-source-restriction spec's `scram-sha-256`-only
+  invariant for every input (#105, hardened #109).
 
 ## [1.4.4] - 2026-07-17
 

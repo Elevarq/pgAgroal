@@ -78,6 +78,27 @@ contains a password value; it only references the operator's Secret.
 {{- end }}
 
 {{/*
+Validate the frontend TLS values (fail closed on typed or unsupported input).
+*/}}
+{{- define "pgagroal.validateTLS" -}}
+{{- if not (kindIs "bool" .Values.tls.enabled) }}
+{{- fail "pgagroal: tls.enabled must be a boolean (true or false, not a quoted string)" }}
+{{- end }}
+{{- if not (kindIs "bool" .Values.tls.mutualTLS) }}
+{{- fail "pgagroal: tls.mutualTLS must be a boolean (true or false, not a quoted string)" }}
+{{- end }}
+{{- if and .Values.tls.enabled (empty .Values.tls.existingSecret) }}
+{{- fail "pgagroal: tls.existingSecret is required when tls.enabled is true (a Secret with keys tls.crt, tls.key, and ca.crt for mutual TLS)" }}
+{{- end }}
+{{- if and .Values.tls.mutualTLS (not .Values.tls.enabled) }}
+{{- fail "pgagroal: tls.mutualTLS requires tls.enabled=true" }}
+{{- end }}
+{{- if ne .Values.tls.certAuthMode "verify-ca" }}
+{{- fail "pgagroal: tls.certAuthMode must be verify-ca (the pgagroal 2.1.0 pooler supports verify-ca client-certificate checking only)" }}
+{{- end }}
+{{- end }}
+
+{{/*
 pgexporter (optional metrics-exporter component) names and labels.
 */}}
 {{- define "pgagroal.pgexporter.fullname" -}}

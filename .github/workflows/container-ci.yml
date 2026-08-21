@@ -54,6 +54,9 @@ jobs:
       - name: Helm lint
         run: helm lint helm/pgagroal/
 
+      - name: Helm TLS render test (#109)
+        run: bash test/validation/helm-tls-render-test.sh
+
       - name: Helm template (dry-run render)
         run: |
           helm template test-release helm/pgagroal/ \

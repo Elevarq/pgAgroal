@@ -101,9 +101,11 @@ tls:
   # mutualTLS is true). Create it from your own certificate before installing.
   existingSecret: "pgagroal-tls"
   # -- Require client certificates (mutual TLS); needs ca.crt in the Secret.
+  # pgagroal requires and verifies the client cert against the CA (verify-ca).
   mutualTLS: false
-  # -- Client-certificate verification mode when mutualTLS is true.
-  # verify-ca | verify-full
+  # -- Client-certificate verification mode. Only `verify-ca` is supported: the
+  # pgagroal 2.1.0 pooler has no tls_cert_auth_mode key, so verify-full / CN-SAN
+  # matching is not available.
   certAuthMode: verify-ca
 
 # ---------------------------------------------------------------------------

@@ -25,48 +25,55 @@ and is out of scope.
 
 | Input | Type | Default | Constraints |
 |-------|------|---------|-------------|
-| `PGAGROAL_TLS` (env) / `pgagroal.tls.enabled` (Helm) | bool-string | `off` | `on`/`true`/`1`/`yes` enable TLS; anything else disables it. |
+| `PGAGROAL_TLS` (env) / `pgagroal.tls.enabled` (Helm) | bool-string | `off` | Enable value: `on`/`true`/`1`/`yes`. Disable value: `off`/`false`/`0`/`no`. Any OTHER value (a typo) is rejected — it does not silently disable TLS. |
 | `PGAGROAL_TLS_CERT_FILE` (env) | path | — | Server certificate (PEM). REQUIRED when TLS is enabled; must exist and be readable. |
 | `PGAGROAL_TLS_KEY_FILE` (env) | path | — | Server private key (PEM). REQUIRED when TLS is enabled; must exist and be readable. |
-| `PGAGROAL_TLS_CA_FILE` (env) | path | — | CA bundle (PEM) for client-certificate (mutual) TLS. Optional. |
-| `PGAGROAL_TLS_CERT_AUTH_MODE` (env) | string | `verify-ca` | Only meaningful when a CA is set: `verify-ca` \| `verify-full`. |
+| `PGAGROAL_TLS_CA_FILE` (env) | path | — | CA bundle (PEM) for client-certificate (mutual) TLS. Optional; when set, pgagroal requires and verifies a client certificate against the CA. |
+| `PGAGROAL_TLS_CERT_AUTH_MODE` (env) / `pgagroal.tls.certAuthMode` (Helm) | string | `verify-ca` | Only `verify-ca` is supported. The pgagroal **pooler** has no `tls_cert_auth_mode` key (it is a pgagroal-*vault* setting), so `verify-full`/CN-SAN matching is NOT available and is rejected. |
 
 ### Outputs
 
 - `pgagroal.conf` `[pgagroal]` section contains, **only when TLS is enabled**:
   `tls = on`, `tls_cert_file = <installed cert>`, `tls_key_file = <installed key>`,
-  and, when a CA is provided, `tls_ca_file = <installed ca>` and
-  `tls_cert_auth_mode = <mode>`.
+  and, when a CA is provided, `tls_ca_file = <installed ca>`. **No
+  `tls_cert_auth_mode` line is ever emitted** (the pooler does not support it).
 - Installed certificate material under a writable directory
   (`${CONF_DIR}/tls/{server.crt,server.key,ca.crt}`) with the private key at
   mode `0600`.
 
 ## Behaviors
 
-- **B1** — Given `PGAGROAL_TLS` unset, when `pgagroal.conf` is rendered, then it
-  contains no `tls`, `tls_cert_file`, `tls_key_file`, `tls_ca_file`, or
-  `tls_cert_auth_mode` keys (behavior is unchanged from a non-TLS build).
-- **B2** — Given `PGAGROAL_TLS` truthy with cert + key, when the config is rendered,
-  then the `[pgagroal]` section contains `tls = on`, `tls_cert_file`, and
+- **B1** — Given `PGAGROAL_TLS` a disable value (off/false/0/no or unset), when
+  `pgagroal.conf` is rendered, then it contains no `tls*` keys (behavior is
+  unchanged from a non-TLS build).
+- **B2** — Given `PGAGROAL_TLS` an enable value with cert + key, when the config is
+  rendered, then the `[pgagroal]` section contains `tls = on`, `tls_cert_file`, and
   `tls_key_file` pointing at the installed paths; no `tls_ca_file` line is present.
-- **B3** — Given `PGAGROAL_TLS` truthy with cert + key + CA, when the config is
-  rendered, then it additionally contains `tls_ca_file` and
-  `tls_cert_auth_mode = <PGAGROAL_TLS_CERT_AUTH_MODE default verify-ca>`.
-- **B4** — Given `PGAGROAL_TLS` truthy, when the entrypoint installs certificate
+- **B3** — Given `PGAGROAL_TLS` an enable value with cert + key + CA, when the config
+  is rendered, then it additionally contains `tls_ca_file` — and never
+  `tls_cert_auth_mode`.
+- **B4** — Given `PGAGROAL_TLS` enabled, when the entrypoint installs certificate
   material, then the private key is written with mode `0600` regardless of the
   source file's permissions.
-- **B5** — Given `PGAGROAL_TLS` truthy but `PGAGROAL_TLS_CERT_FILE` or
+- **B5** — Given `PGAGROAL_TLS` enabled but `PGAGROAL_TLS_CERT_FILE` or
   `PGAGROAL_TLS_KEY_FILE` unset, missing, or unreadable, when the entrypoint runs,
   then it exits non-zero with a message naming the missing input, before starting
   pgagroal (fail closed).
+- **B6** — Given `PGAGROAL_TLS` set to a value that is neither a known enable nor a
+  known disable value (a typo), when the entrypoint runs, then it exits non-zero
+  before starting pgagroal (fail closed — never a silent plaintext listener).
+- **B7** — Given `PGAGROAL_TLS_CERT_AUTH_MODE=verify-full`, or `PGAGROAL_TLS_CERT_AUTH_MODE`
+  set without a CA, when the entrypoint runs, then it exits non-zero.
 
 ## Rules
 
 - **R1** — TLS is enabled iff `PGAGROAL_TLS` matches (case-insensitively)
-  `on`/`true`/`1`/`yes`. Any other value (including unset) disables it.
-- **R2** — When TLS is enabled, `tls_cert_auth_mode` is emitted only if a CA file
-  is provided, and its value is one of `verify-ca`/`verify-full` (default
-  `verify-ca`).
+  `on`/`true`/`1`/`yes`; disabled iff it matches `off`/`false`/`0`/`no` (or is
+  unset). Any other value is rejected (B6) rather than treated as disabled.
+- **R2** — The pooler `[pgagroal]` section supports `tls`, `tls_cert_file`,
+  `tls_key_file`, and `tls_ca_file` only. `tls_cert_auth_mode` is **never** emitted;
+  `PGAGROAL_TLS_CERT_AUTH_MODE` accepts only `verify-ca`, and `verify-full` is
+  rejected as unsupported.
 - **R3** — The installed private key is mode `0600`; the certificate and CA are
   world-readable (`0644`).
 
@@ -84,7 +91,9 @@ and is out of scope.
 | Trigger | Response |
 |---------|----------|
 | `PGAGROAL_TLS` enabled and cert or key missing/unreadable | Entrypoint exits non-zero with a message naming the missing file; pgagroal is not started. |
-| `PGAGROAL_TLS_CERT_AUTH_MODE` not in `{verify-ca, verify-full}` | Entrypoint exits non-zero naming the valid values. |
+| `PGAGROAL_TLS` set to an unrecognized value (typo) | Entrypoint exits non-zero; never a silent plaintext listener. |
+| `PGAGROAL_TLS_CERT_AUTH_MODE=verify-full` (unsupported by the pooler) | Entrypoint exits non-zero. |
+| `PGAGROAL_TLS_CERT_AUTH_MODE` set without a CA | Entrypoint exits non-zero. |
 
 ## Constraints / NFR
 

@@ -33,21 +33,29 @@ DEFAULT_HBA_SOURCE="10.0.0.0/8,172.16.0.0/16,172.17.0.0/16,172.18.0.0/16,172.19.
 build_hba_lines() {
     local sources="${PGAGROAL_HBA_SOURCE:-${DEFAULT_HBA_SOURCE}}"
     local cidr
-    # Each entry must be exactly `all` or a CIDR. Validating this closes an
-    # injection: a value containing whitespace or `#` would otherwise be inserted
-    # verbatim into the HBA line and could add fields or comment out the method
-    # (e.g. `all trust #` -> `host all all all trust #  scram-sha-256`, which
-    # pgagroal reads as a no-auth `trust` rule). Invalid entries are dropped so
-    # the generated method stays scram-sha-256 (spec invariant I3).
-    local re='^(all|([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2})$'
+    # Each entry must be exactly `all` or a syntactically valid CIDR whose octets
+    # are 0-255 and whose mask is one pgagroal actually matches. pgagroal matches
+    # HBA CIDRs on OCTET boundaries only, so only /8, /16, /24, /32 (and the
+    # any-source 0.0.0.0/0) are meaningful. Validating this both closes an
+    # injection (a value with whitespace/`#` would otherwise be inserted verbatim
+    # and could comment out the scram-sha-256 method, e.g. `all trust #`) and
+    # avoids feeding pgagroal an address its inet_pton() rejects. Invalid entries
+    # are dropped with a warning, so the generated method stays scram-sha-256
+    # (spec invariant I3).
+    local octet='(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
+    local re="^(all|0\.0\.0\.0/0|${octet}\.${octet}\.${octet}\.${octet}/(8|16|24|32))$"
+    # Split on comma into an array so the values are never subject to pathname
+    # globbing or IFS word-splitting (an entry of `*` must not expand to files).
+    local entries=()
     local IFS=','
-    for cidr in ${sources}; do
+    read -r -a entries <<< "${sources}"
+    for cidr in "${entries[@]}"; do
         # Trim surrounding whitespace.
         cidr="${cidr#"${cidr%%[![:space:]]*}"}"
         cidr="${cidr%"${cidr##*[![:space:]]}"}"
         [ -z "${cidr}" ] && continue
         if [[ ! "${cidr}" =~ $re ]]; then
-            echo "Warning: ignoring invalid PGAGROAL_HBA_SOURCE entry '${cidr}' (must be 'all' or a CIDR)" >&2
+            printf 'Warning: ignoring invalid PGAGROAL_HBA_SOURCE entry %q (must be "all" or an octet-aligned CIDR)\n' "${cidr}" >&2
             continue
         fi
         printf 'host    all       all   %s   scram-sha-256\n' "${cidr}"
@@ -69,6 +77,25 @@ tls_enabled() {
     esac
 }
 
+# validate_tls_setting rejects a PGAGROAL_TLS value that is neither a known
+# on-value nor a known off-value, so a typo (e.g. `tru`, `enabled`) fails config
+# generation instead of silently starting a plaintext listener (fail closed).
+validate_tls_setting() {
+    case "$(printf '%s' "${PGAGROAL_TLS:-off}" | tr '[:upper:]' '[:lower:]')" in
+        on|true|1|yes|off|false|0|no) ;;
+        *)
+            printf 'Error: invalid PGAGROAL_TLS value %q (use on/true/1/yes or off/false/0/no)\n' "${PGAGROAL_TLS}" >&2
+            return 1
+            ;;
+    esac
+    # A CA-verification mode without a CA is a misconfiguration (client-cert
+    # verification cannot be performed) — reject it rather than ignore it.
+    if [ -n "${PGAGROAL_TLS_CERT_AUTH_MODE:-}" ] && [ -z "${PGAGROAL_TLS_CA_FILE:-}" ]; then
+        echo "Error: PGAGROAL_TLS_CERT_AUTH_MODE is set but PGAGROAL_TLS_CA_FILE is not; client-certificate verification needs a CA" >&2
+        return 1
+    fi
+}
+
 # install_tls_material copies the operator-supplied cert/key (and optional CA)
 # into TLS_DIR with the permissions pgagroal requires: key 0600, cert/CA 0644.
 # Fails closed (non-zero) if TLS is enabled but the cert or key is missing or
@@ -86,22 +113,24 @@ install_tls_material() {
         echo "Error: PGAGROAL_TLS is enabled but PGAGROAL_TLS_KEY_FILE ('${key}') is missing or unreadable" >&2
         return 1
     fi
-    mkdir -p "${TLS_DIR}"
-    install -m 0644 "${cert}" "${TLS_DIR}/server.crt"
-    install -m 0600 "${key}" "${TLS_DIR}/server.key"
+    mkdir -p -- "${TLS_DIR}"
+    install -m 0644 -- "${cert}" "${TLS_DIR}/server.crt"
+    install -m 0600 -- "${key}" "${TLS_DIR}/server.key"
     if [ -n "${ca}" ]; then
         if [ ! -r "${ca}" ]; then
             echo "Error: PGAGROAL_TLS_CA_FILE ('${ca}') is set but unreadable" >&2
             return 1
         fi
-        install -m 0644 "${ca}" "${TLS_DIR}/ca.crt"
+        install -m 0644 -- "${ca}" "${TLS_DIR}/ca.crt"
     fi
 }
 
 # build_tls_lines emits the pgagroal.conf [pgagroal]-section TLS keys when TLS is
 # enabled, pointing at the installed paths, and nothing when TLS is disabled.
-# tls_cert_auth_mode is emitted only with a CA, and validated to verify-ca /
-# verify-full (returns non-zero on an invalid mode → fail closed).
+# Providing a CA turns on client-certificate (mutual) TLS: pgagroal requires and
+# verifies a client cert against the CA (verify-ca semantics). The pooler section
+# has NO tls_cert_auth_mode key (that is a pgagroal-vault setting), so verify-full
+# / CN-SAN matching is not available and is rejected rather than silently ignored.
 build_tls_lines() {
     tls_enabled || return 0
     printf 'tls = on\n'
@@ -110,11 +139,14 @@ build_tls_lines() {
     if [ -n "${PGAGROAL_TLS_CA_FILE:-}" ]; then
         local mode="${PGAGROAL_TLS_CERT_AUTH_MODE:-verify-ca}"
         case "${mode}" in
-            verify-ca|verify-full) ;;
-            *) echo "Error: PGAGROAL_TLS_CERT_AUTH_MODE must be verify-ca or verify-full (got '${mode}')" >&2; return 1 ;;
+            verify-ca) ;;
+            verify-full)
+                echo "Error: PGAGROAL_TLS_CERT_AUTH_MODE=verify-full is not supported by the pgagroal 2.1.0 pooler (only verify-ca client-certificate checking is available)" >&2
+                return 1
+                ;;
+            *) echo "Error: PGAGROAL_TLS_CERT_AUTH_MODE must be verify-ca (got '${mode}')" >&2; return 1 ;;
         esac
         printf 'tls_ca_file = %s\n' "${TLS_DIR}/ca.crt"
-        printf 'tls_cert_auth_mode = %s\n' "${mode}"
     fi
 }
 
@@ -142,6 +174,7 @@ main() {
     # the [pgagroal]-section TLS lines before rendering. Empty when TLS is off,
     # so the rendered config is unchanged for non-TLS deployments.
     export PGAGROAL_TLS="${PGAGROAL_TLS:-off}"
+    validate_tls_setting
     install_tls_material
     PGAGROAL_TLS_LINES="$(build_tls_lines)"
     export PGAGROAL_TLS_LINES

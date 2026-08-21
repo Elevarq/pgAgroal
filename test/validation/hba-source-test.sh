@@ -99,5 +99,19 @@ check "AC-08 valid 10.0.0.0/8 kept"   "1" "$(printf '%s\n' "${out}" | grep -c '1
 check "AC-08 valid 192.168.0.0/16 kept" "1" "$(printf '%s\n' "${out}" | grep -c '192\.168\.0\.0/16')"
 check "AC-08 all lines scram-sha-256" "2" "$(printf '%s\n' "${out}" | grep -cE '[[:space:]]scram-sha-256$')"
 
+# AC-09: semantic validation — reject out-of-range octets, non-octet masks, and
+# glob metacharacters; accept octet-aligned masks and 0.0.0.0/0.
+for bad in '999.999.999.999/24' '256.0.0.0/8' '10.0.0.0/20' '10.0.0.0/33' '10.0.0/8' '*' '10.*.0.0/16'; do
+    out="$(PGAGROAL_HBA_SOURCE="${bad}" build_hba_lines 2>/dev/null)"
+    check "AC-09 invalid '${bad}' dropped" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+done
+for good in '10.0.0.0/8' '192.168.1.0/24' '10.1.2.3/32' '0.0.0.0/0' 'all'; do
+    out="$(PGAGROAL_HBA_SOURCE="${good}" build_hba_lines 2>/dev/null)"
+    check "AC-09 valid '${good}' kept" "1" "$(printf '%s\n' "${out}" | grep -c '^host')"
+done
+# A glob metacharacter must not expand to filenames (unquoted-expansion guard).
+out="$(cd / && PGAGROAL_HBA_SOURCE='*' build_hba_lines 2>/dev/null)"
+check "AC-09 '*' does not glob to files" "0" "$(printf '%s\n' "${out}" | grep -c '^host')"
+
 echo "=== ${pass} passed, ${fail} failed ==="
 [ "${fail}" -eq 0 ]
