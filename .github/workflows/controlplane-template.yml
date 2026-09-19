@@ -14,6 +14,10 @@ on:
       - 'deploy/controlplane/**'
       - '.github/workflows/controlplane-template.yml'
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
