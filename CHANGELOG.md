@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.6] - 2026-10-11
+
+Class: security
+
+### Security
+
+- Carry a downstream security patch that hardens the **client startup-packet
+  parser** in the bundled upstream pgagroal 2.1.0 (treats the startup packet as
+  a validation boundary and centralizes bounded field copies for
+  username/database/application_name in `security.c` + `utils.c`). The patch is
+  a validated upstream-candidate fix (sanitizer + regression tested); it applies
+  cleanly to the pinned 2.1.0 source and is applied at build time with a
+  fail-loud `git apply --check` guard. This is **not** a fork (ADR-0001): it is
+  removed once upstream ships a release carrying the fix and `PGAGROAL_VERSION`
+  is bumped to it. Upstream coordinated disclosure stalled; the same
+  vulnerability class is public upstream (`pgagroal/pgagroal#1016/#1051/#1020`,
+  fix PRs unmerged). Backend-facing parse fixes are tracked as a follow-up. See
+  `PATCHES.md`. (#123)
+
 ## [1.4.5] - 2026-08-20
 
 Class: feature

@@ -41,6 +41,24 @@ WORKDIR /src
 RUN git clone --branch ${PGAGROAL_VERSION} --depth 1 \
         https://github.com/pgagroal/pgagroal.git
 
+# --- Carried downstream security patches (Elevarq/pgAgroal#123) ------------
+# Applied on the pinned upstream source before build. This is NOT a fork
+# (ADR-0001): each patch is a security fix pending upstream acceptance and is
+# removed once upstream ships a release carrying it and PGAGROAL_VERSION is
+# bumped to it. See PATCHES.md for provenance and removal conditions.
+#
+# Fail loud: `git apply --check` under `set -e` aborts the build if a future
+# PGAGROAL_VERSION bump makes a patch no longer apply, so we can never
+# silently ship an unpatched (or double-patched) binary.
+COPY patches/ /src/patches/
+WORKDIR /src/pgagroal
+RUN set -eux; \
+    for p in /src/patches/*.patch; do \
+        echo "Applying carried patch: ${p}"; \
+        git apply --check "${p}"; \
+        git apply "${p}"; \
+    done
+
 WORKDIR /src/pgagroal/build
 
 RUN cmake \

@@ -1,0 +1,332 @@
+diff --git a/src/include/utils.h b/src/include/utils.h
+index 41eb13f..b3292cb 100644
+--- a/src/include/utils.h
++++ b/src/include/utils.h
+@@ -136,6 +136,17 @@ pgagroal_get_request(struct message* msg);
+ int
+ pgagroal_extract_username_database(struct message* msg, char** username, char** database, char** appname);
+ 
++/**
++ * Copy a NUL-terminated string into a fixed-size destination, truncating to fit
++ * and always NUL-terminating. Use for copying parsed (attacker-controlled) input
++ * into fixed connection/struct fields so it cannot overflow them.
++ * @param dst The destination buffer
++ * @param dstsize The size of the destination buffer in bytes
++ * @param src The source string (may be NULL → dst is zeroed)
++ */
++void
++pgagroal_copy_bounded(void* dst, size_t dstsize, const char* src);
++
+ /**
+  * Extract a message from a message
+  * @param type The message type to be extracted
+diff --git a/src/libpgagroal/security.c b/src/libpgagroal/security.c
+index ab023af..f90d772 100644
+--- a/src/libpgagroal/security.c
++++ b/src/libpgagroal/security.c
+@@ -321,7 +321,13 @@ pgagroal_authenticate(int client_fd, char* address, int* slot, SSL** client_ssl,
+ 
+       /* Extract parameters: username / database */
+       pgagroal_log_trace("authenticate: username/database (%d)", client_fd);
+-      pgagroal_extract_username_database(request_msg, &username, &database, &appname);
++      if (pgagroal_extract_username_database(request_msg, &username, &database, &appname))
++      {
++         pgagroal_log_debug("authenticate: malformed startup packet (%d)", client_fd);
++         pgagroal_write_connection_refused(c_ssl, client_fd);
++         pgagroal_write_empty(c_ssl, client_fd);
++         goto bad_password;
++      }
+ 
+       /* TLS scenario */
+       if (is_tls_user(username, database) && c_ssl == NULL)
+@@ -392,11 +398,10 @@ pgagroal_authenticate(int client_fd, char* address, int* slot, SSL** client_ssl,
+          }
+       }
+ 
+-      /* Set the application_name on the connection */
++      /* Set the application_name on the connection (bounded to the field). */
+       if (appname != NULL)
+       {
+-         memset(&config->connections[*slot].appname, 0, MAX_APPLICATION_NAME);
+-         memcpy(&config->connections[*slot].appname, appname, strlen(appname));
++         pgagroal_copy_bounded(config->connections[*slot].appname, MAX_APPLICATION_NAME, appname);
+       }
+ 
+       if (config->connections[*slot].has_security != SECURITY_INVALID)
+@@ -745,7 +750,13 @@ pgagroal_remote_management_auth(int client_fd, char* address, SSL** client_ssl)
+ 
+       /* Extract parameters: username / database */
+       pgagroal_log_trace("remote_management_auth: username/database (%d)", client_fd);
+-      pgagroal_extract_username_database(request_msg, &username, &database, &appname);
++      if (pgagroal_extract_username_database(request_msg, &username, &database, &appname))
++      {
++         pgagroal_log_debug("remote_management_auth: malformed startup packet (%d)", client_fd);
++         pgagroal_write_connection_refused(c_ssl, client_fd);
++         pgagroal_write_empty(c_ssl, client_fd);
++         goto bad_password;
++      }
+ 
+       /* Must be admin database */
+       if (strcmp("admin", database) != 0)
+@@ -1565,26 +1576,29 @@ use_unpooled_connection(struct message* request_msg, SSL* c_ssl, int client_fd,
+    pgagroal_log_trace("authenticate: client auth request (%d)", client_fd);
+ 
+    // Extract username, database, and appname from request message
+-   pgagroal_extract_username_database(request_msg, &client_username, &client_database, &client_appname);
++   if (pgagroal_extract_username_database(request_msg, &client_username, &client_database, &client_appname))
++   {
++      pgagroal_log_debug("use_unpooled_connection: malformed startup packet (slot %d)", slot);
++      goto error;
++   }
+ 
+    // Resolve database alias to real database name
+    real_database = resolve_database_alias(client_username, client_database);
+ 
+-   // Store the extracted values in the connection slot
++   // Store the extracted values in the connection slot. Bound every copy to the
++   // destination field: these are pre-auth, attacker-controlled parameters and
++   // must not overflow the fixed-size connection fields.
+    if (client_username != NULL)
+    {
+-      memset(&config->connections[slot].username, 0, MAX_USERNAME_LENGTH);
+-      memcpy(&config->connections[slot].username, client_username, strlen(client_username));
++      pgagroal_copy_bounded(config->connections[slot].username, MAX_USERNAME_LENGTH, client_username);
+    }
+    if (client_database != NULL)
+    {
+-      memset(&config->connections[slot].database, 0, MAX_DATABASE_LENGTH);
+-      memcpy(&config->connections[slot].database, client_database, strlen(client_database));
++      pgagroal_copy_bounded(config->connections[slot].database, MAX_DATABASE_LENGTH, client_database);
+    }
+    if (client_appname != NULL)
+    {
+-      memset(&config->connections[slot].appname, 0, MAX_APPLICATION_NAME);
+-      memcpy(&config->connections[slot].appname, client_appname, strlen(client_appname));
++      pgagroal_copy_bounded(config->connections[slot].appname, MAX_APPLICATION_NAME, client_appname);
+    }
+ 
+    // Create startup message with the REAL database name for PostgreSQL
+diff --git a/src/libpgagroal/utils.c b/src/libpgagroal/utils.c
+index 2301354..4493f75 100644
+--- a/src/libpgagroal/utils.c
++++ b/src/libpgagroal/utils.c
+@@ -72,6 +72,51 @@ pgagroal_get_request(struct message* msg)
+    return pgagroal_read_int32(msg->data + 4);
+ }
+ 
++static char*
++copy_param(const char* s)
++{
++   size_t n = strlen(s) + 1;
++   char* d = (char*)calloc(1, n);
++
++   if (d != NULL)
++   {
++      memcpy(d, s, n);
++   }
++   return d;
++}
++
++void
++pgagroal_copy_bounded(void* dst, size_t dstsize, const char* src)
++{
++   size_t n;
++
++   if (dst == NULL || dstsize == 0)
++   {
++      return;
++   }
++   memset(dst, 0, dstsize);
++   if (src == NULL)
++   {
++      return;
++   }
++   n = strlen(src);
++   if (n > dstsize - 1)
++   {
++      n = dstsize - 1;   /* always leave room for the NUL written by memset */
++   }
++   memcpy(dst, src, n);
++}
++
++/*
++ * Parse the user / database / application_name parameters from a client startup
++ * packet. This is a validation boundary on untrusted, pre-authentication input:
++ * it parses strictly as key/value pairs and rejects malformed packets rather
++ * than returning partial or aliased data. Returns 0 on success (with *username
++ * and *database both set to independently-owned strings, *appname optional), or
++ * non-zero on a malformed packet or allocation failure (with all outputs NULL).
++ * Callers MUST check the return value and refuse the connection on non-zero.
++ * No parsed string is logged here, since it is unvalidated attacker input.
++ */
+ int
+ pgagroal_extract_username_database(struct message* msg, char** username, char** database, char** appname)
+ {
+@@ -79,31 +124,47 @@ pgagroal_extract_username_database(struct message* msg, char** username, char**
+    int counter = 0;
+    signed char c;
+    char** array = NULL;
+-   size_t size;
+    char* un = NULL;
+    char* db = NULL;
+    char* an = NULL;
++   int rc = 1;
+ 
+    *username = NULL;
+    *database = NULL;
+    *appname = NULL;
+ 
+-   /* We know where the parameters start, and we know that the message is zero terminated */
++   /* Need at least the 8-byte header plus the list terminator byte. */
++   if (msg == NULL || msg->data == NULL || msg->length < 9)
++   {
++      return 1;
++   }
++
++   /* Count the NUL-terminated parameter tokens in [8, length-1); the final byte
++    * (length-1) is the list terminator and is excluded. */
+    for (int i = 8; i < msg->length - 1; i++)
+    {
+-      c = pgagroal_read_byte(msg->data + i);
+-      if (c == 0)
++      if (pgagroal_read_byte(msg->data + i) == 0)
+       {
+          counter++;
+       }
+    }
+ 
+-   array = (char**)malloc(sizeof(char*) * counter);
++   /* Startup parameters are key/value pairs: an odd token count is a key with no
++    * value, and zero tokens carries no user. Both are malformed. */
++   if (counter == 0 || (counter % 2) != 0)
++   {
++      return 1;
++   }
++
++   array = (char**)calloc(counter, sizeof(char*));
++   if (array == NULL)
++   {
++      return 1;
++   }
+ 
+    counter = 0;
+    start = 8;
+    end = 8;
+-
+    for (int i = 8; i < msg->length - 1; i++)
+    {
+       c = pgagroal_read_byte(msg->data + i);
+@@ -111,56 +172,87 @@ pgagroal_extract_username_database(struct message* msg, char** username, char**
+       if (c == 0)
+       {
+          array[counter] = (char*)calloc(1, end - start);
++         if (array[counter] == NULL)
++         {
++            goto cleanup;
++         }
+          memcpy(array[counter], msg->data + start, end - start);
+-
+          start = end;
+          counter++;
+       }
+    }
+ 
+-   for (int i = 0; i < counter; i++)
++   /* Iterate strictly by pairs; array[i] is a key, array[i + 1] its value. */
++   for (int i = 0; i + 1 < counter; i += 2)
+    {
+-      if (!strcmp(array[i], "user"))
+-      {
+-         size = strlen(array[i + 1]) + 1;
+-         un = calloc(1, size);
+-         memcpy(un, array[i + 1], size);
++      char* key = array[i];
++      char* val = array[i + 1];
+ 
+-         *username = un;
++      if (!strcmp(key, "user"))
++      {
++         free(un);
++         un = copy_param(val);
++         if (un == NULL)
++         {
++            goto cleanup;
++         }
+       }
+-      else if (!strcmp(array[i], "database"))
++      else if (!strcmp(key, "database"))
+       {
+-         size = strlen(array[i + 1]) + 1;
+-         db = calloc(1, size);
+-         memcpy(db, array[i + 1], size);
+-
+-         *database = db;
++         free(db);
++         db = copy_param(val);
++         if (db == NULL)
++         {
++            goto cleanup;
++         }
+       }
+-      else if (!strcmp(array[i], "application_name"))
++      else if (!strcmp(key, "application_name"))
+       {
+-         size = strlen(array[i + 1]) + 1;
+-         an = calloc(1, size);
+-         memcpy(an, array[i + 1], size);
+-
+-         *appname = an;
++         free(an);
++         an = copy_param(val);
++         if (an == NULL)
++         {
++            goto cleanup;
++         }
+       }
+    }
+ 
+-   if (*database == NULL)
++   /* A non-empty user is required. */
++   if (un == NULL || un[0] == '\0')
+    {
+-      *database = *username;
++      goto cleanup;
+    }
+ 
+-   pgagroal_log_trace("Username: %s", *username);
+-   pgagroal_log_trace("Database: %s", *database);
++   /* An omitted database defaults to the user (PostgreSQL behaviour), but as an
++    * independent copy so the two outputs have single, non-aliased ownership and
++    * cannot be double-freed by callers. */
++   if (db == NULL)
++   {
++      db = copy_param(un);
++      if (db == NULL)
++      {
++         goto cleanup;
++      }
++   }
+ 
++   *username = un;
++   *database = db;
++   *appname = an;
++   un = NULL;
++   db = NULL;
++   an = NULL;
++   rc = 0;
++
++cleanup:
++   free(un);
++   free(db);
++   free(an);
+    for (int i = 0; i < counter; i++)
+    {
+       free(array[i]);
+    }
+    free(array);
+-
+-   return 0;
++   return rc;
+ }
+ 
+ int
